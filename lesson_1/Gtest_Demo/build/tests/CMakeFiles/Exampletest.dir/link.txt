@@ -1,0 +1,1 @@
+/bin/c++ CMakeFiles/Exampletest.dir/test.cc.o -o Exampletest  -lgtest -lgtest_main ../libGtest_Demo.a

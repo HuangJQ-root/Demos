@@ -1,0 +1,2 @@
+/bin/ar qc libGtest_Demo.a CMakeFiles/Gtest_Demo.dir/src/example.c.o
+/bin/ranlib libGtest_Demo.a

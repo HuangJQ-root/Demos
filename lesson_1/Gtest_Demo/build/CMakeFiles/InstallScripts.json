@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/cheeco/Gtest_Demo/build/cmake_install.cmake",
+		"/home/cheeco/Gtest_Demo/build/tests/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -1,0 +1,14 @@
+[
+{
+  "directory": "/home/cheeco/Gtest_Demo/build",
+  "command": "/bin/cc  -I/home/cheeco/Gtest_Demo/include -std=gnu99 -o CMakeFiles/Gtest_Demo.dir/src/example.c.o -c /home/cheeco/Gtest_Demo/src/example.c",
+  "file": "/home/cheeco/Gtest_Demo/src/example.c",
+  "output": "CMakeFiles/Gtest_Demo.dir/src/example.c.o"
+},
+{
+  "directory": "/home/cheeco/Gtest_Demo/build/tests",
+  "command": "/bin/c++  -I/home/cheeco/Gtest_Demo/include -std=gnu++17 -o CMakeFiles/Exampletest.dir/test.cc.o -c /home/cheeco/Gtest_Demo/tests/test.cc",
+  "file": "/home/cheeco/Gtest_Demo/tests/test.cc",
+  "output": "tests/CMakeFiles/Exampletest.dir/test.cc.o"
+}
+]
