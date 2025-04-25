@@ -51,6 +51,7 @@ CLASS_DIAGRAMS       = YES                # 生成类继承图
 ### 5. 其他常用配置 
 ```makefile  
 RECURSIVE            = YES                # 启用递归搜索(项目含有多层子目录)
+PREDEFINED           = NEU_PLATFORM_LINUX # 若文件涉及宏定义。例： Doxyfile 里定义NEU_PLATFORM_LINUX宏，这样 Doxygen 在处理代码时就会包含#ifdef NEU_PLATFORM_LINUX内的代码。
 ```  
 
 
