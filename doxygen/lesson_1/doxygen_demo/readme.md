@@ -1,7 +1,3 @@
-
-以下是将您提供的 Doxygen 测试步骤转换为 **Markdown 格式** 的内容，便于阅读和分享：
-
-
 # Doxygen 测试指南  
 **目的**：学习如何使用 Doxygen 为项目生成基础文档  
 
@@ -52,10 +48,9 @@ CALL_GRAPH           = YES                # 生成函数调用图
 CLASS_DIAGRAMS       = YES                # 生成类继承图  
 ```  
 
-### 5. 其他常用配置 (我没试过)
+### 5. 其他常用配置 
 ```makefile  
-QUIET                = YES                # 静默模式（不输出冗余信息）  
-JAVADOC_AUTOBRIEF    = YES                # 自动提取注释第一行作为简要说明  
+RECURSIVE            = YES                # 启用递归搜索(项目含有多层子目录)
 ```  
 
 
