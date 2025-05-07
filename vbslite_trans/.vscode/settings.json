@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "rte_dds_adaptor.h": "c",
+        "mvbs_adapter_task.h": "c",
+        "mvbs_adapter_base.h": "c",
+        "start_sec_code.h": "c",
+        "stop_sec_data.h": "c"
+    }
+}

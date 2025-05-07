@@ -1,0 +1,1 @@
+/bin/cc CMakeFiles/local_test_app.dir/local_test/app_test.c.o CMakeFiles/local_test_app.dir/generated/HelloWorldPlugin.c.o CMakeFiles/local_test_app.dir/generated/app_config.c.o -o local_test_app  mvbs/libmvbs.a mvbs/libmvbs_aux.a

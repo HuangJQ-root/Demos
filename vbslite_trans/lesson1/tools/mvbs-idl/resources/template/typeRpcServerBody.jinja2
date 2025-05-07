@@ -1,0 +1,428 @@
+/*
+ * Copyright (c) 2025 Li Auto Inc. and its affiliates
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * This file was generated form {{ Idlfilename }}.idl by the mvbs-idl-gen tool.
+ */
+
+{% import './general/typeRPC.jinja2' as RPC -%}
+#include <string.h>
+
+#include <mvbs/errno.h>
+
+#include <mcdr/mcdr.h>
+
+#include <mvbs/utils/log.h>
+#include <mvbs/utils/string.h>
+
+#include <rpc/rpc.h>
+
+#include "{{ Idlfilename }}RpcServer.h"
+
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+#endif
+
+#ifndef UNUSED_ARG
+#define UNUSED_ARG(x) ((void)(x))
+#endif{{"\n"}}
+
+struct rpc_srv_handler;
+
+typedef int32_t (*rpc_srv_handle)(struct rpc_connection *conn,
+					struct mvbs_cdr *cdr,
+					struct rpc_srv_handler *handler,
+					struct rpc_header *header);
+struct rpc_srv_handler {
+	char	*interface;
+	char	*operation;
+
+	rpc_srv_handle	handle;
+	void		*svc_cb;	// User Defined Callback
+
+	uint32_t	stream:1;
+	uint32_t	active:1;
+	uint32_t	sn;		// Store the sn of stream request
+};
+
+{%- for node in  constructMapList %}
+{%- for member in node.FuncMember %}
+{%- if node.ModuleName -%}
+	{% set interface_name = node.ModuleName ~ "_" ~ node.InterfaceName %}
+{%- else -%}
+	{% set interface_name = node.InterfaceName %}
+{%- endif -%}
+
+{%- set inputs = member.ParamIn | default([]) + member.ParamInout | default([]) %}
+{%- set outputs = member.ParamOut | default([]) + member.ParamInout | default([]) %}
+
+{%- if inputs != [] and outputs != [] %}
+
+/* service callback: Param[IN]      Param[OUT] */
+__attribute__((weak)) int32_t {{ interface_name }}_{{ member.FuncName }}_svc({{interface_name}}_{{member.FuncName}}_in *req_type, {{interface_name}}_{{member.FuncName}}_out *res_type)
+{
+	UNUSED_ARG(req_type);
+	UNUSED_ARG(res_type);
+
+	return RPC_SVC_FAIL;
+}
+{%- elif inputs != [] and outputs == []%}
+/* service callback: Param[IN]  */
+__attribute__((weak)) int32_t {{ interface_name }}_{{ member.FuncName }}_svc({{interface_name}}_{{member.FuncName}}_in *req_type)
+{
+	UNUSED_ARG(req_type);
+
+	return RPC_SVC_FAIL;
+}
+{%- elif inputs == [] and outputs != []%}
+/* service callback: Param[IN]  */
+__attribute__((weak)) int32_t {{ interface_name }}_{{ member.FuncName }}_svc({{interface_name}}_{{member.FuncName}}_out *res_type)
+{
+	UNUSED_ARG(res_type);
+
+	return RPC_SVC_FAIL;
+}
+{%- elif inputs == [] and outputs == []%}
+/* service callback: Param[IN]  */
+__attribute__((weak)) int32_t {{ interface_name }}_{{ member.FuncName }}_svc(void)
+{
+
+	return RPC_SVC_FAIL;
+}
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+
+static int32_t rpc_server_error_handle(struct rpc_connection *conn, struct mvbs_cdr *cdr,
+					struct rpc_header *header, int32_t rpc_errno)
+{
+	int32_t ret = 0;
+	char errno_msg[1];
+	strcpy(errno_msg, "");
+
+	/*
+	 *if we want to add error message in the future, we can use macro to define them.
+	 *Here, we can create a local parameter (char* err_msg) which is assigned with
+	 *the error message based on the rpc_errno type and put it and its length in
+	 *the err_res struct, thus the body_len in the header is correct.
+	 */
+	struct rpc_error_response {
+		struct rpc_header	header;
+
+		uint32_t		errno_number;
+
+		uint32_t	msg_head;
+		char errno_msg[1];
+
+	} err_res;
+
+	mcdr_reset_buffer(cdr);
+
+	if (rpc_header_serialize(cdr, RPC_TYPE_FAIL, header->sn, sizeof(err_res) - sizeof(struct rpc_header)) < 0)
+		return -ERR_MCDR;
+
+	if (mcdr_serialize_uint32_t(cdr, rpc_errno) == false)
+		return -ERR_MCDR;
+
+	if (mcdr_serialize_string(cdr, errno_msg) == false)
+		return -ERR_MCDR;
+
+	const char *buf = (const char *)mcdr_get_buffer(cdr);
+
+	ret = rpc_connection_send(conn, buf, sizeof(err_res));
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}{{"\n"}}
+
+{%- for node in  constructMapList %}
+{%- for member in node.FuncMember %}
+{%- if node.ModuleName -%}
+	{% set interface_name = node.ModuleName ~ "_" ~ node.InterfaceName %}
+{%- else -%}
+	{% set interface_name = node.InterfaceName %}
+{%- endif -%}
+{%- set inputs = member.ParamIn | default([]) %}
+{%- set outputs = member.ParamOut | default([]) %}
+
+{%- if "_stream" in member.FuncName and member.FuncName.split("_")[-1] == "stream" %}
+static int32_t {{ interface_name }}_{{ member.FuncName }}_handle(struct rpc_connection *conn,
+					 struct mvbs_cdr *cdr,
+					 struct rpc_srv_handler *handler,
+					 struct rpc_header *header)
+{
+	{%- if inputs != [] %}
+	/* Param[IN] */
+	{{interface_name}}_{{member.FuncName}}_in req_type;{{"\n"}}
+	{%- endif %}
+
+	{%- if outputs != [] %}
+	/* Param[OUT] */
+	{{interface_name}}_{{member.FuncName}}_out res_type;
+	{%- endif %}
+
+	int32_t		ret;
+	uint32_t	type;
+	uint32_t	offset;
+	uint32_t	length;
+{% if inputs != [] and outputs != [] %}
+	int32_t (*svc_cb)({{interface_name}}_{{member.FuncName}}_in *req_type, {{interface_name}}_{{member.FuncName}}_out *res_type);
+{%- elif inputs != [] and outputs == []%}
+	int32_t (*svc_cb)({{interface_name}}_{{member.FuncName}}_in *req_type);
+{%- elif inputs == [] and outputs != []%}
+	int32_t (*svc_cb)({{interface_name}}_{{member.FuncName}}_out *res_type);
+{%- elif inputs == [] and outputs == []%}
+	int32_t (*svc_cb)(void);
+{%- endif %}
+
+	/* step1: get current offset */
+	offset = mcdr_buffer_length(cdr);{{"\n"}}
+	{%- if inputs != [] %}
+	/* step2: deserialize Param[IN] */
+	if ({{interface_name}}_{{member.FuncName}}_deserialize_input_params(cdr, &req_type) == false)
+		goto fail;
+	{%- endif %}
+
+	svc_cb = handler->svc_cb;
+
+	while (1) {
+		/* step3: Call the service callback defined by user */
+	{%- if inputs != [] and outputs != [] %}
+		ret = svc_cb(&req_type, &res_type);
+	{%- elif inputs != [] and outputs == []%}
+		ret = svc_cb(&req_type);
+	{%- elif inputs == [] and outputs != []%}
+		ret = svc_cb(&res_type);
+	{%- elif inputs == [] and outputs == []%}
+		ret = svc_cb();
+	{%- endif %}
+
+		if (ret == RPC_SVC_FAIL)
+			return rpc_server_error_handle(conn, cdr, header, RPC_ERRNO_INVALID);
+
+		if (ret == RPC_SVC_ABORT)
+			return 0;
+
+		/* step4: Recover the position to offset */
+		mcdr_reset_buffer_offset(cdr, offset);{{"\n"}}
+		{%- if outputs != [] %}
+		/* step5: serialize Param[OUT] */
+		if ({{interface_name}}_{{member.FuncName}}_serialize_output_params(cdr, &res_type) == false)
+			goto fail;
+		{%- endif %}
+
+		/* step6: Get the total length of this package */
+		length = mcdr_buffer_length(cdr);
+
+		/* step7: serialize the RPC Header */
+		mcdr_reset_buffer(cdr);
+
+		type = (ret == RPC_SVC_CONT)?RPC_TYPE_STREAM_RES:RPC_TYPE_STREAM_STOP;
+
+		if (rpc_header_serialize(cdr, type, header->sn, length - RPC_HEADER_SIZE) < 0)
+			goto fail;
+
+		/* step8: Send the reply package */
+		const char *buf = (const char *)mcdr_get_buffer(cdr);
+
+		if (rpc_connection_send(conn, buf, length) < 0)
+			goto fail;
+
+		if (ret == RPC_SVC_STOP)
+			return 0;
+	}
+
+fail:
+	return rpc_server_error_handle(conn, cdr, header, RPC_ERRNO_SERVERERROR);
+
+}
+{%- else %}
+static int32_t {{ interface_name }}_{{ member.FuncName }}_handle(struct rpc_connection *conn,
+					 struct mvbs_cdr *cdr,
+					 struct rpc_srv_handler *handler,
+					 struct rpc_header *header)
+{
+	{%- if inputs != [] %}
+	/* Param[IN] */
+	{{interface_name}}_{{member.FuncName}}_in req_type;{{"\n"}}
+	{%- endif %}
+
+	{%- if outputs != [] %}
+	/* Param[OUT] */
+	{{interface_name}}_{{member.FuncName}}_out res_type;
+	{%- endif %}
+
+	int32_t		ret;
+	uint32_t	offset;
+	uint32_t	length;
+{% if inputs != [] and outputs != [] %}
+	int32_t (*svc_cb)({{interface_name}}_{{member.FuncName}}_in *req_type, {{interface_name}}_{{member.FuncName}}_out *res_type);
+{%- elif inputs != [] and outputs == []%}
+	int32_t (*svc_cb)({{interface_name}}_{{member.FuncName}}_in *req_type);
+{%- elif inputs == [] and outputs != []%}
+	int32_t (*svc_cb)({{interface_name}}_{{member.FuncName}}_out *res_type);
+{%- elif inputs == [] and outputs == []%}
+	int32_t (*svc_cb)(void);
+{%- endif %}
+
+	/* step1: get current offset */
+	offset = mcdr_buffer_length(cdr);{{"\n"}}
+
+	{%- if inputs != [] %}
+	/* step2: deserialize Param[IN] */
+	if ({{interface_name}}_{{member.FuncName}}_deserialize_input_params(cdr, &req_type) == false)
+		goto fail;
+	{%- endif %}
+
+	/* step3: Call the service callback defined by user */
+	svc_cb = handler->svc_cb;
+
+	{%- if inputs != [] and outputs != [] %}
+		ret = svc_cb(&req_type, &res_type);
+	{%- elif inputs != [] and outputs == []%}
+		ret = svc_cb(&req_type);
+	{%- elif inputs == [] and outputs != []%}
+		ret = svc_cb(&res_type);
+	{%- elif inputs == [] and outputs == []%}
+		ret = svc_cb();
+	{%- endif %}
+
+	if (ret == RPC_SVC_FAIL)
+		return rpc_server_error_handle(conn, cdr, header, RPC_ERRNO_INVALID);
+
+	/* step4: Recover the position to offset */
+	mcdr_reset_buffer_offset(cdr, offset);{{"\n"}}
+
+	{%- if outputs != [] %}
+	/* step5: serialize Param[OUT] and RETURN */
+	if ({{interface_name}}_{{member.FuncName}}_serialize_output_params(cdr, &res_type) == false)
+			goto fail;
+	{%- endif %}
+
+	/* step6: Get the total length of this package */
+	length = mcdr_buffer_length(cdr);
+
+	/* step7: serialize the RPC Header */
+	mcdr_reset_buffer(cdr);
+
+	if (rpc_header_serialize(cdr, RPC_TYPE_NORM_RES, header->sn, length-RPC_HEADER_SIZE) < 0)
+		goto fail;
+
+	/* step8: Send the reply package */
+	const char *buf = (const char *)mcdr_get_buffer(cdr);
+
+	if (rpc_connection_send(conn, buf, length) < 0)
+		goto fail;
+
+	return 0;
+
+fail:
+	return rpc_server_error_handle(conn, cdr, header, RPC_ERRNO_SERVERERROR);
+
+}
+{%- endif %}
+{{""}}
+{%- endfor %}
+{%- endfor %}
+
+static struct rpc_srv_handler srv_tab[] = {
+{%- for node in  constructMapList %}
+{%- for member in node.FuncMember %}
+{%- if node.ModuleName %}
+	{%- set interface_name = node.ModuleName ~ "_" ~ node.InterfaceName %}
+{%- else %}
+	{%- set interface_name = node.InterfaceName %}
+{%- endif %}
+	{
+		.interface	= "{{ interface_name }}",
+		.operation	= "{{ member.FuncName }}",
+		.handle		= {{ interface_name }}_{{ member.FuncName }}_handle,
+		.svc_cb		= {{ interface_name }}_{{ member.FuncName }}_svc,
+
+	{%- if "_stream" in member.FuncName and member.FuncName.split("_")[-1] == "stream" %}
+		.stream		= 1,
+	{%- else %}
+		.stream		= 0,
+	{%- endif %}
+		.active		= 0,
+		.sn		= 0,
+	},
+{%- endfor %}
+{%- endfor %}
+};
+
+
+static bool ends_with_stream(const char *string) {
+	const char *suffix = "_stream";
+	size_t string_len = strlen(string);
+	size_t suffix_len = strlen(suffix);
+
+	if (string_len < suffix_len) {
+		return false;
+	}
+
+	return strcmp(string + (string_len - suffix_len), suffix) == 0;
+}
+
+
+int32_t {{ Idlfilename }}_rpc_server_svc_cb(struct rpc_connection *conn,
+			struct mvbs_cdr *cdr, struct rpc_header *header)
+{
+
+	int32_t  ret;
+	bool     interface_found = false;
+	if (conn == NULL || cdr == NULL || header == NULL)
+		return -ERR_INVALID;
+
+	static char interface[64];
+	static char operation[64];
+
+	if (mcdr_deserialize_string(cdr, interface, 64) == false)
+		return -ERR_MCDR;
+
+	if (mcdr_deserialize_string(cdr, operation, 64) == false)
+		return -ERR_MCDR;
+
+	if (header->msg_type != RPC_TYPE_NORM_REQ) {
+		if (!ends_with_stream(operation)) {
+			strcat(operation, "_stream");
+		}
+	}
+
+	for (uint32_t i = 0; i < ARRAY_SIZE(srv_tab); i++) {
+		if (mvbs_strcmp(interface, srv_tab[i].interface))
+			continue;
+
+		interface_found = true;
+
+		if (mvbs_strcmp(operation, srv_tab[i].operation))
+			continue;
+
+		ret = srv_tab[i].handle(conn, cdr, &srv_tab[i], header);
+
+		return ret;
+	}
+
+	if (interface_found) {
+		interface_found = false;
+		ret = RPC_ERRNO_OPNOTFOUND;
+	} else {
+		ret = RPC_ERRNO_IFNOTFOUND;
+	}
+
+	return rpc_server_error_handle(conn, cdr, header, ret);
+}

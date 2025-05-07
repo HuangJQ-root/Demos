@@ -1,0 +1,45 @@
+<?xml version="1.0" ?>
+<dds>
+	<idl>HelloWorld.idl</idl>
+	<network>
+		<master>
+			<!-- 替换成本地ip -->
+			<address>127.0.0.1</address>
+			<netmask>255.255.255.0</netmask>
+		</master>
+	</network>
+	<discovery>
+		<announce>
+			<times>50</times>
+			<period>3 0</period>
+		</announce>
+		<heartbeat>
+			<per_samples>5</per_samples>
+			<period>5 0</period>
+		</heartbeat>
+		<liveliness>
+			<lease_duration>10 0</lease_duration>
+			<period>5 0</period>
+		</liveliness>
+	</discovery>
+	<participant>
+		<name>node_1</name>
+		<domain_id>0</domain_id>
+		<max_remote_participants>9</max_remote_participants>
+		<local_rx_buffer>13</local_rx_buffer>
+		<writer>
+			<key>w1</key>
+			<topic>MVBS_topic1</topic>
+			<type>MVBS::HelloWorld</type>
+			<qos>default</qos>
+			<max_remote_peers>2</max_remote_peers>
+		</writer>
+		<reader>
+			<key>r1</key>
+			<topic>MVBS_topic1</topic>
+			<type>MVBS::HelloWorld</type>
+			<qos>default</qos>
+			<max_remote_peers>2</max_remote_peers>
+		</reader>
+	</participant>
+</dds>
