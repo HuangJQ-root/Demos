@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "helloworldplugin.h": "c",
+        "mvbs_aux.h": "c"
+    }
+}
