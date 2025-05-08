@@ -1,0 +1,60 @@
+/*
+ * Copyright (c) 2025 Li Auto Inc. and its affiliates
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * This file was generated form {{ Idlfilename }}.idl by the mvbs-idl-gen tool.
+ */
+
+{% import './general/typeRPC.jinja2' as RPC -%}
+{% import './typeRpcServerBody.jinja2' as typeRpcClientBody -%}
+#ifndef __{{ Idlfilename | upper }}RPCSERVER_H
+#define __{{ Idlfilename | upper }}RPCSERVER_H
+#include <rpc/rpc.h>
+#include "{{ Idlfilename }}RpcParams.h"
+
+/* return value for user in server callback function */
+#define		RPC_SVC_FAIL	0 // server doesn't reply and cb won't be called next time.
+#define		RPC_SVC_STOP	1 // server will reply and cb won't be called next time.
+#define		RPC_SVC_CONT	2 // server will reply and cb will be called next time.
+#define		RPC_SVC_ABORT	3 // server doesn't reply and cb will be called next time.
+
+{%- for node in  constructMapList %}
+{%- for member in node.FuncMember %}
+{%- if node.ModuleName -%}
+	{% set interface_name = node.ModuleName ~ "_" ~ node.InterfaceName %}
+{%- else -%}
+	{% set interface_name = node.InterfaceName %}
+{%- endif -%}
+{%- set inputs = member.ParamIn | default([]) + member.ParamInout | default([]) %}
+{%- set outputs = member.ParamOut | default([]) + member.ParamInout | default([]) %}
+
+{% if inputs != [] and outputs != [] -%}
+int32_t {{ interface_name }}_{{ member.FuncName }}_svc({{interface_name}}_{{member.FuncName}}_in *req_type, {{interface_name}}_{{member.FuncName}}_out *res_type);
+{%- elif inputs != [] and outputs == []%}
+int32_t {{ interface_name }}_{{ member.FuncName }}_svc({{interface_name}}_{{member.FuncName}}_in *req_type);
+{%- elif inputs == [] and outputs != []%}
+int32_t {{ interface_name }}_{{ member.FuncName }}_svc({{interface_name}}_{{member.FuncName}}_out *res_type);
+{%- elif inputs == [] and outputs == []%}
+int32_t {{ interface_name }}_{{ member.FuncName }}_svc(void);
+{%- endif %}
+
+{%- endfor %}
+{%- endfor %}
+
+int32_t {{ Idlfilename }}_rpc_server_svc_cb(struct rpc_connection *conn,
+			struct mvbs_cdr *cdr, struct rpc_header *header);
+
+#endif /* !__{{ Idlfilename | upper }}RPCSERVER_H__ */

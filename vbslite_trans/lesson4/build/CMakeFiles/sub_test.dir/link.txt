@@ -1,0 +1,1 @@
+/bin/cc -g CMakeFiles/sub_test.dir/udp_test/sub/sub_test.c.o CMakeFiles/sub_test.dir/generated/HelloWorldPlugin.c.o CMakeFiles/sub_test.dir/generated/sub_config.c.o -o sub_test  mvbs/libmvbs.a mvbs/libmvbs_aux.a

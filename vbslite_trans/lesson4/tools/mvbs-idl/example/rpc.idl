@@ -1,0 +1,7 @@
+module RPC{
+    interface TEST {
+        long add(long a, long b);
+        long hello_stream(uint32 count, out string recv_string);
+        long client_stream(uint32 count, uint32 add);
+    };
+};

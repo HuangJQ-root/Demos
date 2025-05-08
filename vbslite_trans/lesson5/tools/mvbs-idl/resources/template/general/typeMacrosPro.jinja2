@@ -1,0 +1,729 @@
+{# /*
+ * Copyright (c) 2025 Li Auto Inc. and its affiliates
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */ #}
+
+{#------------------------------------------------- declare------------------------------------------------------ #}
+{%- macro declareEnumMicro(node) -%}
+	{%- for member in node.memberFieldMapList %}
+	{{ member.name }} {%- if(member.ordinal != "NULL") %} = {{ member.ordinal }}{%- endif -%}{{- commaIfNeededMicroMicro(loop.index, node.memberFieldMapList)}}
+	{%- endfor %}
+{%- endmacro %}
+
+{%- macro declareUnionMicro(node) -%}
+	{%- for member in node.memberFieldMapList %}
+		{{ member.mvbsTypeName }} {{ member.name }};
+	{%- endfor %}
+{%- endmacro %}
+
+{%- macro commaIfNeededMicroMicro(index, v) %}
+	{%- set lastone = length(v) - 1 -%}
+	{%- if index <= lastone %}, {%- endif %}
+{%- endmacro %}
+
+{%- macro declareMember(node, member) %}
+{%- if node.constructKind == "alias" %}
+	{%- if node.isAliseofSequence == "true"  %}
+typedef struct {{ node.nativeFQNameInModule }} {
+	struct {{ member.SeqTypeName }} {{ member.seqname }};
+}{{ node.nativeFQNameInModule }};
+	{%- else %}
+{{ declareTypedef(member) }} {{ declareMemberType(member) }}{%- if member.name == "" %} {{ node.nativeFQNameInModule }}{%- else %} {{ member.name }}{%- endif %}{{ member.dimensionList }};
+	{%- endif %}
+{%- else %}
+	{%- if  member.typeName == "string" %}
+	char {{ member.name }}[{{ member.strSize }} + 1];
+	{%- elif  member.typeName == "Wstring" %}
+	uint32_t {{ member.name }}[{{ member.strSize }}];
+	{%- elif  member.isSeq == "true" %}
+	struct {{ member.SeqTypeName }} {{ member.name }};
+	{%- else %}
+	{{ declareMemberType(member) }}{%- if member.name == "" %}{{ node.nativeFQNameInModule }}{%- else %} {{ member.name }}{%- endif %}{%- if member.dimensionList -%}{{member.dimensionList}}{%- endif %};
+	{%- endif %}
+{%- endif %}
+{%- endmacro %}
+
+{%- macro declareTypedef(member) -%}
+{%- if member.name == "" %}typedef {%- endif %}
+{%- endmacro %}
+
+{%- macro declareMemberType(member) %}
+	{%- if member.typeKind == "user" and not member.mvbsTypeName %}
+	{{- member.nativeTypeFQName }}
+	{%- else%}
+	{{- member.mvbsTypeName }}
+	{%- endif %}
+{%- endmacro %}
+
+{%- macro declareArraydimensionListsIfNeeded(member) -%}
+{%- if member.dimensionList %}{%- for s in member.dimensionList %}[{{ s }}]{%- endfor %}{%- endif %}
+{%- endmacro %}
+{#------------------------------------------------- declare------------------------------------------------------ #}
+
+{#------------------------------------------------- Serialize------------------------------------------------------ #}
+{%- macro ProcessSerialize(node) %}
+	{%- if node.constructKind == "enum" %}
+		{{- enumSerializeMacro(node)}}
+	{%- elif node.constructKind == "union" %}
+		{{- unionSerializeMacro(node)}}
+	{%- elif node.isAliasOfArray == "true" %}
+		{{- AliasArraySerializeMacro(node) }}
+	{%- elif node.isAliseofSequence == "true" %}
+		{{- AliasSequenceSerializeMacro(node) }}
+	{%- else -%}
+		{%- for member in node.memberFieldMapList %}
+			{%- if member.typeKind == "user" and member.isSeq == 'true' %}    {# alise sequence #}
+				{{- SeqAliseSerializeMacro(member) }}{{"\n"}}
+			{%- elif member.typeKind == "user" and not member.dimensionList %}
+				{{- userSerializeMacro(member) }}{{"\n"}}
+			{%- elif member.typeKind == "user" and member.dimensionList %}
+				{{- userArraySerializeMacro(member) }}{{"\n"}}
+			{%- elif member.typeKind == "builtin" and member.isSeq == 'true' %}
+				{{- builtinSequenceSerializeMacro(member) }}{{"\n"}}
+			{%- elif member.typeKind == "builtin" and not member.dimensionList %}
+				{{- primitiveSerializeMacro(member) }}{{"\n"}}
+			{%- elif member.typeKind == "builtin" and member.dimensionList %}
+				{{- builtinArraySerializeMacro(member) }}
+			{%- endif %}
+		{%- endfor %}
+	{%- endif %}
+{%- endmacro %}
+
+{%- macro SeqAliseSerializeMacro(member) %}
+	uint32_t {{member.name}}_size = {{member.SeqTypeName}}_get_length(&topic->{{member.name}});
+	if (!mcdr_serialize_uint32_t(cdr, {{member.name}}_size)) {
+		pr_debug("topic->{{member.name}}.header serialize failed!\n");
+		return false;
+	}
+ 	for (int i = 0; i < (int){{member.name}}_size; ++i)
+	{
+		if (!{{member.nativeTypeFQName}}_serialize_topic(cdr, {{member.SeqTypeName}}_get_reference(&topic->{{member.name}}, i)))
+		{
+			pr_debug("{{member.nativeTypeFQName}} serialize failed!\n");
+			return false;
+		}
+	}
+{%- endmacro %}
+
+{%- macro builtinSequenceSerializeMacro(member) %}
+	if (!{{member.elementSeqSerializeMethod}}(cdr,
+		{{member.SeqTypeName}}_get_reference(&topic->{{member.name}}, 0),
+		{{member.SeqTypeName}}_get_length(&topic->{{member.name}})))
+	{
+		pr_debug("{{member.name}} serialize failed!\n");
+		return false;
+	}
+{%- endmacro %}
+
+{% macro enumSerializeMacro(node) %}
+	if (!mcdr_serialize_uint32_t(cdr, (uint32_t)(*topic))) {
+		pr_debug("enum data serialize failed!\n");
+		return false;
+	}
+{% endmacro %}
+
+{%- macro unionSerializeMacro(node) %}
+	if (!{{ node.nativeTypeFQName }}_serialize_topic(cdr, &topic->_d)) {
+		pr_debug("{{ node.nativeTypeFQName }} derialize failed!\n");
+		return false;
+	}
+
+	switch (topic->_d) {
+		{%- for member in node.memberFieldMapList %}
+		case {{	member.label }}:
+			if (!{{ member.elementSerializeMethod }}(cdr, topic->_u.{{ member.name }})) {
+				pr_debug("{{ member.name }} serialize failed!\n");
+				return false;
+				}
+			break;
+		{%- endfor %}
+		default:
+			pr_debug("Invalid {{ node.name }} variant!\n");
+	}
+
+{%- endmacro %}
+
+{%- macro userArraySerializeMacro(member) %}
+ 	for (int i = 0; i < (int)({{member.arrayTotalSize}}); ++i)
+	{
+		if (!{{member.nativeTypeFQName}}_serialize_topic(cdr, &topic->{{member.name}}[i]))
+		{
+			pr_debug("{{  member.nativeTypeFQName}} serialize failed!\n");
+			return false;
+		}
+	}
+{%- endmacro %}
+
+{% macro AliasArraySerializeMacro(node) %}
+{%- for member in node.memberFieldMapList %}
+	{%- if node.isBaseArray == 'true'%}
+		{%- if  member.typeName == "string" %}
+	//not support string array {{ member.name }}
+		{%- elif  member.typeName == "wstring"%}
+	//not support wstring array {{ member.name }}
+		{%- else %}
+	{{ member.mvbsTypeName }} *data = ({{ member.mvbsTypeName }} *)topic;{{"\n"}}
+	if (!{{ member.elementArraySerializeMethod }}(cdr, data, {{member.arrayTotalSize}})) {
+		pr_debug("{{ node.nativeFQNameInModule }} serialize failed!\n");
+		return false;
+	}
+		{%- endif %}
+	{%- else %}
+	struct {{member.nativeTypeFQName}} *data = (struct {{member.nativeTypeFQName}} *)topic;
+
+ 	for (int i = 0; i < (int) ({{member.arrayTotalSize}}); ++i)
+	{
+		if (!{{member.nativeTypeFQName}}_serialize_topic(cdr, &data[i]))
+		{
+			pr_debug("{{  node.nativeFQNameInModule}} serialize failed!\n");
+			return false;
+		}
+	}
+	{%- endif %}
+{%- endfor %}
+{% endmacro %}
+
+{% macro AliasSequenceSerializeMacro(node) %}
+{%- for member in node.memberFieldMapList %}
+	{%- if node.isBaseSequence == 'true'%}
+	if (!{{member.elementSeqSerializeMethod}}(cdr,
+		{{member.SeqTypeName}}_get_reference(&topic->{{member.seqname}}, 0),
+		{{member.SeqTypeName}}_get_length(&topic->{{member.seqname}})))
+	{
+		pr_debug("{{node.seqname}} serialize failed!\n");
+		return false;
+	}
+	{%- endif %}
+{%- endfor %}
+{% endmacro %}
+
+{%- macro primitiveSerializeMacro(member) %}
+	if (!{{ member.elementSerializeMethod }}(cdr, topic->{{ member.name }})) {
+		pr_debug("{{member.name}} serialize failed!\n");
+		return false;
+	}
+{%- endmacro %}
+
+{% macro builtinArraySerializeMacro(member) %}
+	if (!{{ member.elementArraySerializeMethod }}(cdr, topic->{{ member.name }}, {{member.arrayTotalSize}})) {
+		pr_debug("{{member.name}} serialize failed!\n");
+		return false;
+	}
+{% endmacro %}
+
+{%- macro userSerializeMacro(member) %}
+	if (!{{ member.nativeTypeFQName }}_serialize_topic(cdr, &topic->{{ member.name }})) {
+		pr_debug("{{member.name}} serialize failed!\n");
+		return false;
+	}
+{%- endmacro %}
+
+{#------------------------------------------------- Serialize------------------------------------------------------ #}
+
+
+
+
+{#------------------------------------------------- ComputeSize------------------------------------------------------ #}
+{%- macro ComputeSize(node,sizetype) %}
+	{%- if node.constructKind == "enum" %}
+	{{ ComputeEnumSize(node) }}
+	{%- elif node.constructKind == "union" %}
+	{{ ComputeUnionSize(node,sizetype) }}
+	{%- elif node.constructKind == "alias" %}
+	{{ ComputeAliseArraySize(node,sizetype) }}
+	{%- elif node.isAliseofSequence == "true" and node.isBaseSequence == "true" %}
+	{{ ComputeAliseBaseSequenceSize(node,sizetype) }}
+	{%- elif node.constructKind == "struct" %}
+	{{ ComputeStructSize(node,sizetype) }}
+	{%- endif %}
+{% endmacro %}
+
+{% macro ComputeEnumSize(node) -%}
+	size += mcdr_get_alignment(size, 4) + 4u;
+{%- endmacro %}
+
+{% macro ComputeUnionSize(node,sizetype) -%}
+{%- if sizetype == "topicsize" %}
+	size += {{ node.nativeTypeFQName }}_topic_size(&topic->_d, size);
+	switch (topic->_d) {
+		{%- for member in node.memberFieldMapList %}
+		case {{	member.label }}:
+			{{ ComputeBuiltinTypeSize(member, sizetype) }}
+			break;
+			{%- endfor %}
+		default:
+			pr_debug("Invalid {{ node.name }} variant!\n");
+	}
+{%- elif sizetype == "maxsize" -%}
+	size_t reset_alignment = 0;
+	size_t union_max_size_serialized = 0;
+
+	size += {{ node.nativeTypeFQName }}_topic_max_size(size);
+	{% for member in node.memberFieldMapList %}
+	reset_alignment = size;
+	{{ ComputeBuiltinTypeSize(member, sizetype)}}
+	if (union_max_size_serialized < reset_alignment) {
+		union_max_size_serialized = reset_alignment;
+	}
+	{% endfor %}
+	size = union_max_size_serialized;
+	{%- endif %}
+{%- endmacro %}
+
+{% macro ComputeAliseArraySize(node,sizetype) -%}
+{%- if node.isBaseArray == "false" %}
+	size += mcdr_get_alignment(size, 4);
+	for (int i = 0; i < (int)({{node.memberFieldMapList[0].arrayTotalSize}}); i++ ) {
+		size += {{node.memberFieldMapList[0].typeName}}_topic_max_size(size);
+	}
+{%- elif node.isBaseArray == "true" %}
+	size += mcdr_get_alignment(size, sizeof({{node.memberFieldMapList[0].mvbsTypeName}}));
+	size += {{node.memberFieldMapList[0].arrayTotalSize}} * sizeof({{node.memberFieldMapList[0].mvbsTypeName}});
+{%- endif %}
+
+
+
+{%- endmacro %}
+
+{% macro ComputeAliseBaseSequenceSize(node,sizetype) -%}
+	size += mcdr_get_alignment(size, 4) + 4u;
+	size +=  sizeof({{node.memberFieldMapList[0].mvbsTypeName}}) * {{node.memberFieldMapList[0].seqSizeRealValue}};
+{%- endmacro %}
+
+{% macro ComputeStructSequenceSize(member,sizetype) -%}
+	size += mcdr_get_alignment(size, 4) + 4u;
+
+	for (int i = 0; i < (int)({{member.seqSizeRealValue}}); i++ ) {
+		size += {{member.nativeTypeFQName}}_topic_max_size(size);
+	}
+
+{%- endmacro %}
+
+{% macro ComputeStructSize(node,sizetype) -%}
+	{%- for member in node.memberFieldMapList %}
+		{%- if member.typeKind == "user" and member.isAliseofSequence == 'true' and sizetype == "maxsize" %}
+	size += {{ member.nativeTypeFQName }}_topic_max_size(size);
+		{%- elif member.typeKind == "user" and member.isSeq == 'true' and sizetype == "maxsize" %}
+	{{ComputeStructSequenceSize(member,sizetype)}}
+		{%- elif member.typeKind == "user" and not member.mvbsTypeName and not member.dimensionList and sizetype == "maxsize" %}
+	size += {{ member.nativeTypeFQName }}_topic_max_size(size);
+		{%- elif member.typeKind == "user" and not member.mvbsTypeName and member.dimensionList and sizetype == "maxsize" %}
+	for (int i = 0; i < (int)({{member.arrayTotalSize}}); i++) {
+		size += {{ member.nativeTypeFQName }}_topic_max_size(size);
+	}
+		{%- else %}
+	{{ ComputeBuiltinTypeSize(member, sizetype)}}
+		{%- endif %}
+	{%- endfor %}
+{%- endmacro %}
+
+{% macro ComputeBuiltinTypeSize(member, sizetype) %}
+{%- if member.isSeq == 'true' and sizetype == "maxsize" %}
+	{%- if  member.typeName == "boolean" or member.typeName == "unsigned char" or member.typeName == "int8" or member.typeName == "uint8"  or member.typeName == "octet" -%}
+	size += mcdr_get_alignment(size, 1) + 4u +1u{%- if member.arrayTotalSize%} * {{member.arrayTotalSize}}{%- endif %};
+	{%- elif  member.typeName == "short" or member.typeName == "unsigned short" -%}
+	size += mcdr_get_alignment(size, 2) + 4u +2u{%- if member.arrayTotalSize%} * {{member.arrayTotalSize}}{%- endif %};
+	{%- elif  member.typeName == "long" or member.typeName == "unsigned long" or member.typeName == "float" or member.typeName == "float" -%}
+	size += mcdr_get_alignment(size, 4) + 4u +4u{%- if member.arrayTotalSize%} * {{member.arrayTotalSize}}{%- endif %};
+	{%- elif  member.typeName == "long long" or member.typeName == "unsigned long long" or member.typeName == "double" -%}
+	size += mcdr_get_alignment(size, 8) + 4u +8u{%- if member.arrayTotalSize%} * {{member.arrayTotalSize}}{%- endif %};
+	{%- endif %}
+{%- else %}
+	{%- if (member.typeName == "string" or member.typeName == "wstring") and sizetype == "maxsize" -%}
+	size += mcdr_get_alignment(size, 4) + 4u + {{member.strSize}} + 1u;
+	{%- elif  member.typeName == "boolean" or member.typeName == "unsigned char" or member.typeName == "int8" or member.typeName == "uint8"  or member.typeName == "octet" -%}
+	size += mcdr_get_alignment(size, 1) + 1u{%- if member.arrayTotalSize%} * {{member.arrayTotalSize}}{%- endif %};
+	{%- elif  member.typeName == "short" or member.typeName == "unsigned short" -%}
+	size += mcdr_get_alignment(size, 2) + 2u{%- if member.arrayTotalSize%} * {{member.arrayTotalSize}}{%- endif %};
+	{%- elif  member.typeName == "long" or member.typeName == "unsigned long" or member.typeName == "float" or member.typeName == "float" -%}
+	size += mcdr_get_alignment(size, 4) + 4u{%- if member.arrayTotalSize%} * {{member.arrayTotalSize}}{%- endif %};
+	{%- elif  member.typeName == "long long" or member.typeName == "unsigned long long" or member.typeName == "double" -%}
+	size += mcdr_get_alignment(size, 8) + 8u{%- if member.arrayTotalSize%} * {{member.arrayTotalSize}}{%- endif %};
+	{%- endif -%}
+{%- endif -%}
+{%- endmacro %}
+{#------------------------------------------------- ComputeSize------------------------------------------------------ #}
+
+
+
+{#------------------------------------------------- Deserialize------------------------------------------------------ #}
+{%- macro ProcessDeserialize(node) %}
+	{%- if node.constructKind == "enum" %}
+		{{- enumDeserializeMacro(node)}}
+	{%- elif node.constructKind == "union" %}
+		{{- unionDeserializeMacro(node)}}
+	{%- elif node.isAliasOfArray == "true" %}
+		{{- AliasArrayDeserializeMacro(node) }}
+	{%- elif node.isAliseofSequence == "true" %}
+		{{- AliasSequenceDeserializeMacro(node) }}
+	{%- else -%}
+		{%- for member in node.memberFieldMapList %}
+			{%- if member.typeKind == "user" and member.isSeq == 'true' %}    {# alise sequence #}
+				{{- aliseSequenceDeserializeMacro(member) }}{{"\n"}}
+			{%- elif member.typeKind == "user" and not member.dimensionList %} {# user#}
+				{{- userDeserializeMacro(member) }}{{"\n"}}
+			{%- elif member.typeKind == "user" and member.dimensionList %} {# user array#}
+				{{- userArrayDeserializeMacro(member) }}{{"\n"}}
+			{%- elif member.typeKind == "builtin" and member.isSeq == 'true' %}
+				{{- builtinSequenceDeserializeMacro(member) }}{{"\n"}}
+			{%- elif member.typeKind == "builtin" and not member.dimensionList %}
+				{{- primitiveDeserializeMacro(node,member) }}
+			{%- elif member.typeKind == "builtin" and member.dimensionList %}
+				{{- builtinArrayDeserializeMacro(node,member) }}
+			{%- else %}
+				// not support type {{member.name}}
+			{%- endif %}
+		{%- endfor %}
+	{%- endif %}
+{%- endmacro %}
+
+{%- macro aliseSequenceDeserializeMacro(member) %}
+	uint32_t {{member.name}}_size = 0;
+	if (!mcdr_deserialize_uint32_t(cdr, &{{member.name}}_size)) {
+		pr_debug("{{member.name}}.header deserialize failed!\n");
+		return false;
+	}
+
+	{{member.SeqTypeName}}_set_length(&topic->{{member.name}}, {{member.name}}_size);
+
+ 	for (int i = 0; i < (int){{member.name}}_size; ++i)
+	{
+		if (!{{member.nativeTypeFQName}}_deserialize_topic(cdr, {{member.SeqTypeName}}_get_reference(&topic->{{member.name}}, i)))
+		{
+			pr_debug("{{member.nativeTypeFQName}} deserialize failed!\n");
+			return false;
+		}
+	}
+{%- endmacro %}
+
+{%- macro builtinSequenceDeserializeMacro(member) %}
+	uint32_t {{member.name}}_size = 0;
+	if (!{{member.elementSeqDeserializeMethod}}(cdr,
+				{{member.SeqTypeName}}_get_reference(&topic->{{member.name}}, 0),
+				{{member.SeqTypeName}}_get_max_length(&topic->{{member.name}}),
+				&{{member.name}}_size))
+	{
+		pr_debug("{{member.name}} deserialize failed!\n");
+		return false;
+	}
+	{{member.SeqTypeName}}_set_length(&topic->{{member.name}}, {{member.name}}_size);
+{%- endmacro %}
+
+{%- macro enumDeserializeMacro(node) %}
+	if (!mcdr_deserialize_uint32_t(cdr, (uint32_t *)topic)) {
+		pr_debug("enum data deserialize failed!\n");
+		return false;
+	}
+{%- endmacro %}
+
+{%- macro unionDeserializeMacro(node) %}
+	if (!{{ node.nativeTypeFQName }}_deserialize_topic(cdr, &topic->_d)) {
+		pr_debug("{{ node.nativeTypeFQName }} deserialize failed!\n");
+		return false;
+	}
+
+	switch (topic->_d) {
+		{%- for member in node.memberFieldMapList %}
+		case {{	member.label }}:
+			if (!{{ member.elementDeserializeMethod }}(cdr, &topic->_u.{{ member.name }})) {
+				pr_debug("{{ member.name }} deserialize failed!\n");
+				return false;
+				}
+			break;
+		{%- endfor %}
+		default:
+			pr_debug("Invalid {{ node.name }} variant!\n");
+	}
+
+{%- endmacro %}
+
+{%- macro userArrayDeserializeMacro(member) %}
+	uint32_t i;
+
+ 	for (i = 0; i < (int)({{member.arrayTotalSize}}); ++i)
+	{
+		if (!{{member.nativeTypeFQName}}_deserialize_topic(cdr, &topic->{{member.name}}[i]))
+		{
+			pr_debug("{{  member.nativeTypeFQName}} deserialize failed!\n");
+			return false;
+		}
+	}
+{%- endmacro %}
+
+
+{%- macro AliasArrayDeserializeMacro(node) %}
+{%- for member in node.memberFieldMapList %}
+	{%- if node.isBaseArray == 'true'%}
+		{%- if  member.typeName == "string" %}
+	//not support;TDB
+		{%- elif  member.typeName == "wstring"%}
+	//not support;TDB
+		{%- else %}
+	{{ member.mvbsTypeName }} *data = ({{ member.mvbsTypeName }} *)topic;{{"\n"}}
+	if (!{{ member.elementArrayDeserializeMethod }}(cdr, data, {{member.arrayTotalSize}})) {
+		pr_debug("{{ node.nativeFQNameInModule }} deserialize failed!\n");
+		return false;
+	}
+		{%- endif %}
+	{%- elif node.isBaseArray == 'false' %}
+	uint32_t i;
+	struct {{member.typeName}} *data = (struct {{member.typeName}} *)topic;
+
+	for (i = 0; i < (int)({{member.arrayTotalSize}}); ++i)
+	{
+		if (!{{member.typeName}}_deserialize_topic(cdr, &data[i]))
+		{
+			pr_debug("{{ node.nativeFQNameInModule }} deserialize failed!\n");
+			return false;
+		}
+	}
+	{%- endif %}
+{%- endfor %}
+{% endmacro %}
+
+{%- macro AliasSequenceDeserializeMacro(node) %}
+{%- for member in node.memberFieldMapList %}
+	{%- if node.isBaseSequence == 'true'%}
+	uint32_t {{member.seqname}}_size = 0;
+	if (!{{member.elementSeqDeserializeMethod}}(cdr,
+			{{member.SeqTypeName}}_get_reference(&topic->{{member.seqname}}, 0),
+			{{member.SeqTypeName}}_get_max_length(&topic->{{member.seqname}}),
+			&{{member.seqname}}_size))
+	{
+		pr_debug("{{member.seqname}} deserialize failed!\n");
+		return false;
+	}
+	{{member.SeqTypeName}}_set_length(&topic->{{member.seqname}}, {{member.seqname}}_size);
+	{%- elif node.isBaseSequence == 'false' %}
+	uint32_t i;
+	struct {{member.typeName}} *data = (struct {{member.typeName}} *)topic;
+
+	for (i = 0; i < (int)({{member.arrayTotalSize}}); ++i)
+	{
+		if (!{{member.typeName}}_deserialize_topic(cdr, &data[i]))
+		{
+			pr_debug("{{ node.nativeFQNameInModule }} deserialize failed!\n");
+			return false;
+		}
+	}
+	{%- endif %}
+{%- endfor %}
+{% endmacro %}
+
+
+{%- macro primitiveDeserializeMacro(node,member) -%}
+{%- if member.typeName == "string" or member.typeName == "wstring" and not member.dimensionList %}
+	if (!{{ member.elementDeserializeMethod }}(cdr, topic->{{ member.name }}, {{ member.strSize }} + 1)) {
+		pr_debug("{{ member.name }} deserialize failed!\n");
+		return false;
+	}{{"\n"}}
+{%- else %}
+	if (!{{ member.elementDeserializeMethod }}(cdr, &topic->{{ member.name }})) {
+		pr_debug("{{ member.name }} deserialize failed!\n");
+		return false;
+	}{{"\n"}}
+{%- endif %}
+{%- endmacro %}
+
+{%- macro userDeserializeMacro(member) %}
+	if (!{{ member.nativeTypeFQName }}_deserialize_topic(cdr, &topic->{{ member.name }})) {
+		pr_debug("{{ member.name }} deserialize failed!\n");
+		return false;
+	}
+{%- endmacro %}
+
+{%- macro builtinArrayDeserializeMacro(node, member) %}
+	if (!{{ member.elementArrayDeserializeMethod }}(cdr, topic->{{ member.name }}, {{member.arrayTotalSize}}))
+	{
+		pr_debug("{{ member.name }} deserialize failed!\n");
+		return false;
+	}
+{% endmacro %}
+{#------------------------------------------------- Deserialize------------------------------------------------------ #}
+
+{# ----------------------------------------------Compat Deserialize----------------------------------------------------#}
+{%- macro ProcessDeserializeCompat(node) %}
+	{%- if node.constructKind == "enum" %}
+		{{- enumDeserializeMacro(node)}}
+	{%- elif node.isAliasOfArray == "true" %}
+	{{- AliasArrayDeserializeMacro(node) }}
+	{%- else -%}
+		{%- for member in node.memberFieldMapList %}
+			{%- if member.typeKind == "user" and member.isSeq == 'true' %}    {# alise sequence #}
+				{{- aliseSequenceDeserializeMacroCompat(member) }}{{"\n"}}
+			{%- elif member.typeKind == "user" and not member.dimensionList %}   {# user but not array#}
+				{{- userDeserializeMacroCompat(node, member) }}{{"\n"}}
+			{%- elif member.typeKind == "user" and member.dimensionList %} {# user array#}
+				{{- userArrayDeserializeMacroCompat(node, member) }}{{"\n"}}
+			{%- elif member.typeKind == "builtin" and member.isSeq == 'true' %}   {# base sequence #}
+				{{- sequenceDeserializeMacroCompat(member) }}{{"\n"}}
+			{%- elif member.typeKind == "builtin" and not member.dimensionList %}   {# base data #}
+				{{- primitiveDeserializeMacroCompat(node,member) }}
+			{%- elif member.typeKind == "builtin" and member.dimensionList %}  {#  base array#}
+				{{- builtinArrayDeserializeMacroCompat(node,member) }}
+			{%- endif %}
+		{%- endfor %}
+	{%- endif %}
+{%- endmacro %}
+
+{%- macro DeserializeInitDataCompat(node, member) %}
+init_{{ member.name }}:
+{%- if member.typeKind == "user" and not member.dimensionList %}
+	{{member.nativeTypeFQName}}_init(&topic->{{member.name}});
+{%- elif member.typeKind == "builtin" and member.dimensionList %}
+	mvbs_memzero(topic->{{ member.name }}, sizeof({{member.mvbsTypeName}}) * {{member.arrayTotalSize}});
+{%- elif member.typeKind == "builtin" and not member.dimensionList -%}
+	{%- if member.typeName == "string" or member.typeName == "wstring"%}
+		{%- if  member.defaultvalue  == "" %}
+	mvbs_memzero(topic->{{ member.name }}, {{member.strSize}} + 1);
+		{%-else %}
+	strncpy(topic->{{ member.name }}, {{ member.defaultvalue }}, sizeof(topic->{{ member.name }}) - 1);
+		{%-endif %}
+	{%- else %}
+	topic->{{ member.name }} = {{ member.defaultvalue }};
+	{%- endif %}
+{%- endif -%}
+{%- endmacro -%}
+
+
+{%- macro primitiveDeserializeMacroCompat(node,member) -%}
+{%- if member.typeName == "string" or member.typeName == "wstring" and not member.dimensionList %}
+	if(!mcdrBuffer_available_size(cdr)) {
+		if (!{{ member.elementDeserializeMethod }}(cdr, topic->{{ member.name }}, {{ member.strSize }} + 1)) {
+			pr_debug("{{ member.name }} deserialize failed!\n");
+			goto init_{{member.name}};
+		}
+	} else {
+		if (!{{ member.elementDeserializeMethod }}(cdr, topic->{{ member.name }}, {{ member.strSize }} + 1)) {
+			pr_debug("{{ member.name }} deserialize failed!\n");
+			return false;
+		}
+	}{{"\n"}}
+{%- else %}
+	if(!mcdrBuffer_available_size(cdr)) {
+		if (!{{ member.elementDeserializeMethod }}(cdr, &topic->{{ member.name }})) {
+			pr_debug("{{ member.name }} deserialize failed!\n");
+			goto init_{{member.name}};
+		}
+	} else {
+		if (!{{ member.elementDeserializeMethod }}(cdr, &topic->{{ member.name }})) {
+			pr_debug("{{ member.name }} deserialize failed!\n");
+			return false;
+		}
+	}{{"\n"}}
+{%- endif %}
+{%- endmacro %}
+
+{%- macro userDeserializeMacroCompat(node, member) %}
+	if(!mcdrBuffer_available_size(cdr)) {
+		if (!{{ member.nativeTypeFQName }}_deserialize_topic(cdr, &topic->{{ member.name }})) {
+			pr_debug("{{ member.name }} deserialize failed!\n");
+			goto init_{{ member.name }};
+		}
+	} else {
+		if (!{{ member.nativeTypeFQName }}_deserialize_topic(cdr, &topic->{{ member.name }})) {
+			pr_debug("{{ member.name }} deserialize failed!\n");
+			return false;
+		}
+	}
+{%- endmacro %}
+
+{%- macro aliseSequenceDeserializeMacroCompat(member) %}
+	if(!mcdrBuffer_available_size(cdr)) {
+		for (int i = 0; i < (int)({{member.seqSize}}); ++i)
+		{
+			if (!{{member.nativeTypeFQName}}_deserialize_topic(cdr, &topic->{{member.name}}[i]))
+			{
+				pr_debug("{{  member.nativeTypeFQName}} deserialize failed!\n");
+				goto init_{{ member.name }};
+			}
+		}
+	} else {
+		for (int i = 0; i < (int)({{member.seqSize}}); ++i)
+		{
+			if (!{{member.nativeTypeFQName}}_deserialize_topic(cdr, &topic->{{member.name}}[i]))
+			{
+				pr_debug("{{  member.nativeTypeFQName}} deserialize failed!\n");
+				return false;
+			}
+		}
+	}
+{%- endmacro %}
+
+{%- macro sequenceDeserializeMacroCompat(member) %}
+	if(!mcdrBuffer_available_size(cdr)) {
+		uint32_t {{member.name}}_size = {{member.SeqTypeName}}_get_length(&topic->{{member.name}});
+		if (!{{member.elementSeqDeserializeMethod}}(cdr,
+				{{member.SeqTypeName}}_get_reference(&topic->{{member.name}}, 0),
+				{{member.seqSize}},
+				&{{member.name}}_size))
+		{
+			pr_debug("{{member.name}} deserialize failed!\n");
+			goto init_{{ member.name }};
+		}
+	} else {
+		uint32_t {{member.name}}_size = {{member.SeqTypeName}}_get_length(&topic->{{member.name}});
+		if (!{{member.elementSeqDeserializeMethod}}(cdr,
+				{{member.SeqTypeName}}_get_reference(&topic->{{member.name}}, 0),
+				{{member.seqSize}},
+				&{{member.name}}_size))
+		{
+			pr_debug("{{member.name}} deserialize failed!\n");
+			return false;
+		}
+	}
+{%- endmacro %}
+
+{%- macro userArrayDeserializeMacroCompat(node, member) %}
+	if(!mcdrBuffer_available_size(cdr)) {
+		uint32_t i;
+
+		for (i = 0; i < (int)({{member.arrayTotalSize}}); ++i)
+		{
+			if (!{{member.nativeTypeFQName}}_deserialize_topic(cdr, &topic->{{member.name}}[i]))
+			{
+				pr_debug("{{  member.nativeTypeFQName}} deserialize failed!\n");
+				goto init_{{ member.name }};
+			}
+		}
+	} else {
+		uint32_t i;
+
+		for (i = 0; i < (int)({{member.arrayTotalSize}}); ++i)
+		{
+			if (!{{member.nativeTypeFQName}}_deserialize_topic(cdr, &topic->{{member.name}}[i]))
+			{
+				pr_debug("{{  member.nativeTypeFQName}} deserialize failed!\n");
+				return false;
+			}
+		}
+	}
+{%- endmacro %}
+
+{%- macro builtinArrayDeserializeMacroCompat(node, member) %}
+	if(!mcdrBuffer_available_size(cdr)) {
+		if (!{{ member.elementArrayDeserializeMethod }}(cdr, topic->{{ member.name }}, {{member.arrayTotalSize}}))
+		{
+			pr_debug("{{ member.name }} deserialize failed!\n");
+			goto init_{{ member.name }};
+		}
+	} else {
+		if (!{{ member.elementArrayDeserializeMethod }}(cdr, topic->{{ member.name }}, {{member.arrayTotalSize}})) {
+			pr_debug("{{ member.name }} deserialize failed!\n");
+			return false;
+		}
+	}
+{% endmacro %}
+
+{# ----------------------------------------------Compat Deserialize----------------------------------------------------#}

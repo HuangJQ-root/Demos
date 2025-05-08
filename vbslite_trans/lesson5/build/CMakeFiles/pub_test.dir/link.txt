@@ -1,0 +1,1 @@
+/bin/cc -g CMakeFiles/pub_test.dir/rte_interface_test/pub/pub_test.c.o CMakeFiles/pub_test.dir/generated/HelloWorldPlugin.c.o CMakeFiles/pub_test.dir/generated/pub_config.c.o -o pub_test  mvbs/libmvbs.a mvbs/libmvbs_aux.a

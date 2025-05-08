@@ -1,0 +1,169 @@
+{%- macro gen_static_array(kind, peer_lst, qos_lst) %}
+static struct endpoint_attr static_remote_{{kind}}s[] = {
+{%- for peer in peer_lst %}
+{%- if 'static_peers' in peer -%}
+{%- for static_peer in peer['static_peers'] %}
+{%- set qos = qos_lst[static_peer['qos']] %}
+	{
+		.qos = {
+			.reliability_kind	= {{qos['reliability']['kind']}},
+			.durability_kind	= {{qos['durability']['kind']}},
+			.ownership_kind		= {{qos['ownership']['kind']}},
+			.liveliness_kind	= {{qos['liveliness']['kind']}},
+		},
+		{%- if kind == 'writer' %}
+		.ownership_strength.value	= {{qos['ownership_strength']['value']}},
+		{%- endif %}
+		.liveliness.lease_duration	= { {{qos['liveliness']['lease_duration'][0]}}, {{qos['liveliness']['lease_duration'][1]}} },
+		.deadline.duration		= { {{qos['deadline']['period'][0]}}, {{qos['deadline']['period'][1]}} },
+		.user_defined_id		= {{ static_peer['object_id'] }},
+		.topic_name			= "{{peer['topic']}}",
+		.type				= &{{peer['type'].replace("::", "_")+"_typeplugin"}},
+	},
+{%- endfor %}
+{%- endif %}
+{%- endfor %}
+};
+{{"\n"}}
+{%- endmacro %}
+
+{%- macro gen_local_array(kind, peer_lst, qos_lst, check_crc) %}
+static const struct {{kind}}_attr mvbs_{{kind}}_attrs[] = {
+	{%- for peer in peer_lst %}
+	{%- set qos = qos_lst[peer['qos']] %}
+	{%- set max_match = 'max_matched_writers' if kind == 'reader' else 'max_matched_readers' %}
+	{
+		.key	= "{{peer['key']}}",
+		.type	= &{{peer['type'].replace("::", "_")+"_typeplugin"}},
+		.ptcp	= &mvbs_ptcp,
+		.ep_attr = {
+			.topic_name		= "{{peer['topic']}}",
+			.type			= &{{peer['type'].replace("::", "_")+"_typeplugin"}},
+			.agent_flag		= {{peer['agent_flag']}},
+
+			{%- if 'sendtype' in peer %}
+			.period_ms = {{peer['period']}},
+			{%- endif %}
+			.qos = {
+				.reliability_kind = {{qos['reliability']['kind']}},
+				.durability_kind = {{qos['durability']['kind']}},
+				.ownership_kind = {{qos['ownership']['kind']}},
+				.liveliness_kind = {{qos['liveliness']['kind']}},
+				.history_kind = {{qos['history']['kind']}},
+			},
+			.history.depth = {{qos['history']['depth']}},
+			.ownership_strength.value = {{qos['ownership_strength']['value']}},
+			.liveliness = {
+				.lease_duration = { {{qos['liveliness']['lease_duration'][0]}}, {{qos['liveliness']['lease_duration'][1]}} },
+				.announcement_period = { {{qos['liveliness']['period'][0]}}, {{qos['liveliness']['period'][1]}} },
+			},
+			.resource_limit = {
+				.max_samples = {{qos['history']['max_samples']}},
+				.max_instances = {{qos['history']['max_instances']}},
+				.max_samples_per_instance = {{qos['history']['max_samples_per_instance']}},
+			},
+			.lifespan.duration = { {{qos['lifespan']['period'][0]}}, {{qos['lifespan']['period'][1]}} },
+			.e2e = {
+				.e2e_protection = {{qos['e2e_policy']['enable']}},
+				{# .e2e_p04_data_id = 0, #}
+				.e2e_p04_min_data_length = {{qos['e2e_policy']['e2e_p04_min_data_length']}},
+				.e2e_p04_max_data_length = {{qos['e2e_policy']['e2e_p04_max_data_length']}},
+				.e2e_p04_max_delta_counter = {{qos['e2e_policy']['e2e_p04_max_delta_counter']}},
+				.e2e_deadline_counter = {{qos['e2e_policy']['e2e_deadline_counter']}},
+                		.e2e_liveliness_lease_duration = { {{qos['e2e_policy']['e2e_liveliness_lease_duration'][0]}}, {{qos['e2e_policy']['e2e_liveliness_lease_duration'][1]}} },
+                		.e2e_liveliness_kind = {{qos['e2e_policy']['e2e_liveliness_kind']}},
+			},
+			.deadline.duration	= { {{qos['deadline']['period'][0]}}, {{qos['deadline']['period'][1]}} },
+			.entity_id		= {{loop.index}},
+			.user_defined_id	= {{ peer['object_id'] }},
+			.locator_selector	= 0,
+			.backup_enabled		= {{peer['net_redundancy']}},
+			.crc16_enabled		= {{ 'false' if check_crc == "false" else 'true' }},
+		},
+
+		{%- if kind == 'reader' %}
+		.listener	= {
+			.on_data		= Rte_Dds_Reader_On_Data,
+			.on_irq			= NULL,
+			.on_matched		= Rte_Dds_Reader_On_Matched,
+			.on_e2e_exception	= Rte_Dds_Reader_On_E2e_Exception,
+		},
+		{%- endif %}
+		{%- if kind == 'writer' %}
+		.listener	= {
+			.on_matched		= Rte_Dds_Writer_On_Matched,
+		},
+		{%- endif %}
+		.{{max_match}} = {{peer['max_remote_peers']}},
+		{%- if kind == 'writer' %}
+		.enforce_unicast = false,
+		{%- endif %}
+	},
+	{%- endfor %}
+};
+{%- for peer in peer_lst %}
+{%- set qos = qos_lst[peer['qos']] %}
+
+static struct mvbs_{{kind}}_cache_change_eid_{{loop.index-1}} {
+	struct mp_blk_hdr		hdr;
+	struct {{kind}}_cache_change	cc;
+	uint8_t				data[{{peer['type'].replace("::", "_") | upper +"_SIZE"}}];
+} mvbs_{{kind}}_history_eid_{{loop.index-1}}[{{qos['history']['depth']}}];
+{%- endfor %}
+
+{%- for peer in peer_lst %}
+{%- set qos = qos_lst[peer['qos']] %}
+{%- set proxy_type = 'writer_proxy' if kind == 'reader' else 'reader_proxy' %}
+
+static struct {{proxy_type}}_pool_eid_{{loop.index-1}} {
+	struct mp_blk_hdr	hdr;
+	struct {{proxy_type}}	proxy;
+	{%- if ((qos['history']['depth']*2 + 31)//32) < 8 %}
+	ulong_t			bitmap[{{((qos['history']['depth']*2 + 31)//32)}}]; /* depth = {{qos['history']['depth']}} */
+	{%- else %}
+	ulong_t			bitmap[8]; /* depth = 256 */
+	{%- endif %}
+} mvbs_{{proxy_type}}_eid_{{loop.index-1}}[{{peer['max_remote_peers']}}];
+{%- endfor %}
+
+static struct {{kind}} mvbs_{{kind}}s[] = {
+	{%- for peer in peer_lst %}
+	{%- set qos = qos_lst[peer['qos']] %}
+	{%- set proxy_type = 'writer_proxy' if kind == 'reader' else 'reader_proxy' %}
+	{%- set max_match = 'max_matched_writers' if kind == 'reader' else 'max_matched_readers' %}
+	{
+		.attr		= &mvbs_{{kind}}_attrs[{{loop.index-1}}],
+		.proxies	= {
+			.mem_addr  = (void *)mvbs_{{proxy_type}}_eid_{{loop.index-1}},
+			.mem_size  = sizeof(mvbs_{{proxy_type}}_eid_{{loop.index-1}}),
+			.blk_total = {{peer['max_remote_peers']}},
+			.blk_free  = {{peer['max_remote_peers']}},
+			.blk_size  = sizeof(mvbs_{{proxy_type}}_eid_{{loop.index-1}}[0]) - MP_BLK_HDR_SIZE,
+		},
+		.history	= {
+			.cache_change	   = {
+				.mem_addr  = (void *)mvbs_{{kind}}_history_eid_{{loop.index-1}},
+				.mem_size  = sizeof(mvbs_{{kind}}_history_eid_{{loop.index-1}}),
+				.blk_total = {{qos['history']['depth']}},
+				.blk_free  = {{qos['history']['depth']}},
+				.blk_size  = sizeof(mvbs_{{kind}}_history_eid_{{loop.index-1}}[0]) - MP_BLK_HDR_SIZE,
+			},
+		},
+		{%- if kind == 'reader' %}
+		.owner		= NULL,
+		{%- endif %}
+		.lifespan_td	= TIMER_DESC_INVALID,
+		.deadline_td	= TIMER_DESC_INVALID,
+		.liveliness_td	= TIMER_DESC_INVALID,
+		{%- if kind == 'writer' %}
+		.writer_status	= {
+			.heartbeat_td	= TIMER_DESC_INVALID,
+		},
+		{%- endif %}
+		.listener	= NULL,
+		.priv_data	= NULL,
+	},
+	{%- endfor %}
+};
+{{"\n"}}
+{%- endmacro %}

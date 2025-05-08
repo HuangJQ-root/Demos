@@ -1,0 +1,7 @@
+# Hashes of file build rules.
+4c53158d03bfafa07f8fe49d48ec24b7 CMakeFiles/generate_idl_code
+4c53158d03bfafa07f8fe49d48ec24b7 CMakeFiles/generate_pub_xml_code
+4c53158d03bfafa07f8fe49d48ec24b7 CMakeFiles/generate_sub_xml_code
+1801ec0c9c7a61fb04461e91afd0ad7f generated/HelloWorldPlugin.h
+e122b9c8d4e65a5201bed84e01fc42ec generated/pub_config.c
+7cae0af7ace6dda00c29caa6cedc394c generated/sub_config.c

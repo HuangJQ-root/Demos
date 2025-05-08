@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # 设置 CMake 最低版本要求
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.10)
 
 # 设置项目名称
 project(LocalTest)
