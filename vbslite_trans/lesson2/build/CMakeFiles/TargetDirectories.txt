@@ -1,0 +1,11 @@
+/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles/generate_idl_code.dir
+/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles/generate_app1_xml_code.dir
+/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles/generate_app2_xml_code.dir
+/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles/app1_test.dir
+/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles/app2_test.dir
+/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles/edit_cache.dir
+/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles/rebuild_cache.dir
+/home/cheeco/Demos/vbslite_trans/lesson2/build/mvbs/CMakeFiles/mvbs.dir
+/home/cheeco/Demos/vbslite_trans/lesson2/build/mvbs/CMakeFiles/mvbs_aux.dir
+/home/cheeco/Demos/vbslite_trans/lesson2/build/mvbs/CMakeFiles/edit_cache.dir
+/home/cheeco/Demos/vbslite_trans/lesson2/build/mvbs/CMakeFiles/rebuild_cache.dir

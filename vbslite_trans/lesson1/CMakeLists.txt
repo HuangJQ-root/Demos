@@ -19,6 +19,9 @@ cmake_minimum_required(VERSION 4.0)
 # 设置项目名称
 project(LocalTest)
 
+#配置开启 GDB 调试
+set(CMAKE_BUILD_TYPE Debug)
+
 # 检测 C 和 C++ 编译器
 enable_language(C CXX)
 
@@ -69,7 +72,7 @@ set(IDL_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 add_custom_command(
     OUTPUT ${IDL_OUTPUT_DIR}/HelloWorldPlugin.h ${IDL_OUTPUT_DIR}/HelloWorldPlugin.c
     COMMAND ${CMAKE_COMMAND} -E make_directory ${IDL_OUTPUT_DIR}
-    COMMAND python3 ${IDL_TOOL_PATH} -i ${IDL_INPUT_FILE} -d ${IDL_OUTPUT_DIR} 
+    COMMAND python3 ${IDL_TOOL_PATH} -i ${IDL_INPUT_FILE} -d ${IDL_OUTPUT_DIR} -t TEST
     DEPENDS ${IDL_INPUT_FILE} ${IDL_TOOL_PATH}
     COMMENT "Generating IDL code"
 )

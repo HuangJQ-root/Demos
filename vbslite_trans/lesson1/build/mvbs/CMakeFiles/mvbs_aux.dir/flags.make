@@ -6,5 +6,5 @@ C_DEFINES = -DTARGET_PRODUCT_LINUX
 
 C_INCLUDES = -I/home/cheeco/Demos/vbslite_trans/lesson1/mvbs/posix_aux/include
 
-C_FLAGS = 
+C_FLAGS = -g
 

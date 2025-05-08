@@ -1,0 +1,2 @@
+/bin/ar qc libmvbs_aux.a CMakeFiles/mvbs_aux.dir/posix_aux/src/event.c.o CMakeFiles/mvbs_aux.dir/posix_aux/src/loop.c.o
+/bin/ranlib libmvbs_aux.a

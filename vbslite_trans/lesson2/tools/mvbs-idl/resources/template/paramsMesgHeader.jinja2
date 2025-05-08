@@ -1,0 +1,88 @@
+/*
+ * Copyright (c) 2025 Li Auto Inc. and its affiliates
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * This file was generated form {{ Idlfilename }}.idl by the mvbs-idl-gen tool.
+ */
+ 
+{% import './general/typeMacros.jinja2' as Macros -%}
+{% import './general/typeMacrosPro.jinja2' as MacrosPro -%}
+{% import './general/typePluginMacros.jinja2' as PluginMacros -%}
+{% import './general/typeRPC.jinja2' as RPC -%}
+
+#ifndef {{ Idlfilename }}RpcParam_H
+#define {{ Idlfilename }}RpcParam_H
+
+#include <string.h>
+
+#include <mcdr/mcdr.h>
+
+#include <mvbs/utils/string.h>
+#include <mvbs/utils/mm.h>
+
+{%- for node in constructMapList_idl %}
+
+/************************  {{node.name}}  *************************/
+{{ Macros.declareDataTypeMicro(constructMapList, node) }}
+
+{{ Macros.declareGetRpcTopicSize(node) }}
+
+{{ Macros.declareTopicRpcSerialize(node) }}
+
+{{ Macros.declareTopicRpcDeserialize(node) }}
+
+{%- endfor %}
+
+{%- for node in constructMapList %}
+{%- for member in node.FuncMember %}
+
+{%- if node.ModuleName -%}
+	{% set interface_name = node.ModuleName ~ "_" ~ node.InterfaceName %}
+{%- else -%}
+	{% set interface_name = node.InterfaceName %}
+{%- endif -%}
+
+{%- set inputs = member.ParamIn | default([]) + member.ParamInout | default([]) -%}
+{%- set outputs = member.ParamOut | default([]) + member.ParamInout | default([]) %}
+
+/************************  {{interface_name}}_{{member.FuncName}}  *************************/
+
+{%- if inputs != []%}
+{{ RPC.InputsParamStruct(interface_name, member, inputs) }}
+{%- endif %}
+
+uint32_t get_size_of_{{interface_name}}_{{member.FuncName}}({{ RPC.FunctionInputsParam(interface_name, member, inputs)}}uint32_t size);{{"\n"}}
+
+{%- if inputs != []%}
+bool {{interface_name}}_{{member.FuncName}}_serialize_input_params(struct mvbs_cdr *cdr,
+						{{interface_name}}_{{member.FuncName}}_in *topic);
+
+bool {{interface_name}}_{{member.FuncName}}_deserialize_input_params(struct mvbs_cdr *cdr,
+						{{interface_name}}_{{member.FuncName}}_in *topic);
+{%- endif %}
+{%- if outputs != []%}
+{{ RPC.OutputsParamStruct(interface_name, member, outputs) }}
+
+bool {{interface_name}}_{{member.FuncName}}_serialize_output_params(struct mvbs_cdr *cdr,
+						{{interface_name}}_{{member.FuncName}}_out *topic);
+
+bool {{interface_name}}_{{member.FuncName}}_deserialize_output_params(struct mvbs_cdr *cdr,
+						{{interface_name}}_{{member.FuncName}}_out *topic);
+{%- endif %}
+{%- endfor %}
+{%- endfor %}
+
+#endif /* {{ Idlfilename }}RpcParam_H */

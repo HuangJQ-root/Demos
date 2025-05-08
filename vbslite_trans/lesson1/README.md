@@ -34,7 +34,7 @@ make
 
 ### XML工具
 ```bash
-Example: python mvbs-config.py -s ./example/dds_cfg.xml -t example/dds_cfg.c 
+Example: python mvbs-config.py -s ./example/dds_cfg.xml -t example/dds_cfg.c
 Arguments:
     [-h] or [--help]        Show this help message and exit
     [-s] or [--source]      Source path or file of json config
@@ -44,30 +44,16 @@ Arguments:
 
 ### IDL工具
 ```bash
-Example1: python mvbs-idl.py -i example/dds.idl -d example 
+Example1: python mvbs-idl.py -i example/dds.idl -d example -t TEST
        [-h] or [--help]         Prints this message.
        [-i] or [--input_file]   input file dir.
        [-d] or [--destinate_path] destinate file dir.
        [--test]                 Generate source code with test mode 
 ```
 
-**正确做法**：应该取消 `--test` 选项，生成的文件才能正常运行（有无`test`生成文件内容不一致）。
 
-### 再次说明XML工具
-```bash
-Example: python mvbs-config.py -s ./example/dds_cfg.xml -t example/dds_cfg.c 
-Arguments:
-    [-h] or [--help]        Show this help message and exit
-    [-s] or [--source]      Source path or file of json config
-    [-t] or [--targets]     Target file path or file to generated
-    [--test]                Generate source code with test mode
-```
 
-### 再次说明IDL工具
-```bash
-Example1: python mvbs-idl.py -i example/dds.idl -d example 
-       [-h] or [--help]         Prints this message.
-       [-i] or [--input_file]   input file dir.
-       [-d] or [--destinate_path] destinate file dir.
-       [--test]                 Generate source code with test mode 
-``` 
+### 正确做法：
+- `XML工具`：取消 `--test` 选项，生成的文件才能正常运行。
+- `IDL工具`：保留 `--test` 选项，生成的文件才能正常运行。（有无 `test` 生成文件内容不一致） 
+

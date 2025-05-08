@@ -1,0 +1,194 @@
+{# /*
+ * Copyright (c) 2025 Li Auto Inc. and its affiliates
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */ #}
+
+{% import './general/typeMacros.jinja2' as Macros -%}
+
+{%- macro InterfaceReqFlag(member) %}
+{%- if "_stream" in member.FuncName and member.FuncName.split("_")[-1] == "stream" %} RPC_TYPE_STREAM_REQ{%- else %} RPC_TYPE_NORM_REQ{%- endif %}
+{%- endmacro %}
+
+{%- macro InterfaceIsStream(member) %}
+{%- if "_stream" in member.FuncName and member.FuncName.split("_")[-1] == "stream" %} 1{%- else %} 0{%- endif %}
+{%- endmacro %}
+
+{%- macro GetParamVarsSize(param_list, str) -%}
+{%- for param in param_list %}
+{%- if param.ParamType == "char" and param.strSize %}
+	req_size += mcdr_get_alignment(req_size, sizeof(uint32_t)) + sizeof(uint32_t);
+	req_size += {{param.strSize}};
+{%- else %}
+{%- if str == "in"%}
+	req_size += get_size_of_{{param.ParamType}}(in_1, req_size);
+{%- endif %}
+{%- endif %}
+{%- endfor %}
+{%- endmacro %}
+
+
+{%- macro defineGetRpcBufferSize(interface_name, member, inputs) %}
+uint32_t get_size_of_{{interface_name}}_{{member.FuncName}}({{FunctionInputsParam(interface_name, member, inputs)}}uint32_t size)
+{
+{%- if inputs != []%}
+	UNUSED_ARG(req_type);{{"\n"}}
+{%- endif %}
+	size += mcdr_get_alignment(size, sizeof(uint32_t)) + sizeof(uint32_t);
+	size += sizeof("{{interface_name}}");
+	size += mcdr_get_alignment(size, sizeof(uint32_t)) + sizeof(uint32_t);
+	size += sizeof("{{member.FuncName}}");{{"\n"}}
+{%- if inputs != []%}
+{%- for param in inputs %}
+{%- if param.isbase == "true" %}
+	{%- if param.typeName == "string" or param.typeName == "wstring"%}
+	size += mcdr_get_alignment(size, 4) + 4u + (uint32_t)strlen(req_type->{{param.ParamValue}}) + 1u;
+	{%- else %}
+	size += mcdr_get_alignment(size, sizeof({{param.ParamType}})) + sizeof({{param.ParamType}});
+	{%- endif %}
+{%- else %}
+	size += get_size_of_{{param.ParamType}}(&req_type->{{param.ParamValue}}, size);
+{%- endif %}
+{%- endfor %}
+{%- endif %}
+
+	return size;
+}
+{%- endmacro %}
+
+{%- macro InputsParamSerialize(interface_name, member, inputs) %}
+bool {{interface_name}}_{{member.FuncName}}_serialize_input_params(struct mvbs_cdr *cdr,
+						{{interface_name}}_{{member.FuncName}}_in *req_type)
+{
+	/* serialize the input param*/
+{%- for param in inputs %}
+{%- if param.isbase == "true" %}
+	if (!{{param.elementSerializeMethod}}(cdr, req_type->{{param.ParamValue}})) {
+		pr_warn("{{param.ParamValue}} serialize failed!\n");
+		return false;
+	}
+{%- else %}
+	if (!{{param.elementSerializeMethod}}(cdr, &req_type->{{param.ParamValue}})) {
+		pr_warn("{{param.ParamValue}} serialize failed!\n");
+		return false;
+	}
+{%- endif %}
+{%- endfor %}
+	return true;
+}
+{%- endmacro -%}
+
+{%- macro InputsParamDeserialize(interface_name, member, inputs) %}
+bool {{interface_name}}_{{member.FuncName}}_deserialize_input_params(struct mvbs_cdr *cdr,
+						{{interface_name}}_{{member.FuncName}}_in *topic)
+{
+{%- for param in inputs %}
+{%- if param.typeName == "string"%}
+	if (!{{param.elementDeserializeMethod}}(cdr, topic->{{param.ParamValue}}, {{param.strSize}}+1)) {
+		pr_warn("{{param.ParamValue}} deserialize failed!\n");
+		return false;
+	}
+{%- else %}
+	if (!{{param.elementDeserializeMethod}}(cdr, &topic->{{param.ParamValue}})) {
+		pr_warn("{{param.ParamValue}} deserialize failed!\n");
+		return false;
+	}
+{%- endif %}
+{%- endfor %}
+	return true;
+}
+{%- endmacro -%}
+
+{%- macro OutputsParamSerialize(interface_name, member, outputs) %}
+bool {{interface_name}}_{{member.FuncName}}_serialize_output_params(struct mvbs_cdr *cdr,
+						{{interface_name}}_{{member.FuncName}}_out *topic)
+{
+{%- for param in outputs %}
+{%- if param.isbase == "true" %}
+	if (!{{param.elementSerializeMethod}}(cdr, topic->{{param.ParamValue}})) {
+		pr_warn("{{param.ParamValue}} serialize failed!\n");
+		return false;
+	}
+{%- else %}
+	if (!{{param.elementSerializeMethod}}(cdr, &topic->{{param.ParamValue}})) {
+		pr_warn("{{param.ParamValue}} serialize failed!\n");
+		return false;
+	}
+{%- endif %}
+{%- endfor %}
+	return true;
+}
+{%- endmacro -%}
+
+{%- macro OutputsParamDeserialize(interface_name, member, outputs) %}
+bool {{interface_name}}_{{member.FuncName}}_deserialize_output_params(struct mvbs_cdr *cdr,
+						{{interface_name}}_{{member.FuncName}}_out *topic)
+{
+{%- for param in outputs %}
+{%- if param.typeName == "string"%}
+	if (!{{param.elementDeserializeMethod}}(cdr, topic->{{param.ParamValue}}, {{param.strSize}} + 1)) {
+		pr_warn("{{param.ParamValue}} deserialize failed!\n");
+		return false;
+	}
+{%- else %}
+	if (!{{param.elementDeserializeMethod}}(cdr, &topic->{{param.ParamValue}})) {
+		pr_warn("{{param.ParamValue}} deserialize failed!\n");
+		return false;
+	}
+{%- endif %}
+{%- endfor %}
+	return true;
+}
+{%- endmacro -%}
+
+{%- macro InputsParamStruct(interface_name, member, inputs) %}
+typedef struct {{interface_name}}_{{member.FuncName}}_in {
+{%- for param in inputs %}
+	{%- if param.typeName == "string"%}
+	{{param.ParamType}} {{param.ParamValue}}[{{param.strSize}} + 1];
+	{%- else %}
+	{{param.ParamType}} {{param.ParamValue}};
+	{%- endif %}
+{%- endfor %}
+} {{interface_name}}_{{member.FuncName}}_in;
+{%- endmacro %}
+
+{%- macro OutputsParamStruct(interface_name, member, outputs) %}
+typedef struct {{interface_name}}_{{member.FuncName}}_out {
+{%- for param in outputs %}
+	{%- if param.typeName == "string"%}
+	{{param.ParamType}} {{param.ParamValue}}[{{param.strSize}} + 1];
+	{%- else %}
+	{{param.ParamType}} {{param.ParamValue}};
+	{%- endif %}
+{%- endfor %}
+} {{interface_name}}_{{member.FuncName}}_out;
+{%- endmacro %}
+
+{%- macro FunctionOutputsParam(interface_name, member, outputs) %}
+{%- if outputs != [] %}{{interface_name}}_{{member.FuncName}}_out *res_type,{{" "}}{%- endif -%}
+{%- endmacro %}
+
+{%- macro FunctionInputsParam(interface_name, member, inputs) %}
+{%- if inputs != [] %}{{interface_name}}_{{member.FuncName}}_in *req_type,{{" "}}
+{%- endif %}
+{%- endmacro %}
+
+{%- macro FunctionOutputsParam1(outputs) %}
+{%- if outputs != [] %}&res_type,{{" "}}{%- endif -%}
+{%- endmacro %}
+
+{%- macro FunctionInputsParam1(inputs) %}
+{%- if inputs != [] %}req_type,{{" "}}
+{%- endif %}
+{%- endmacro %}
