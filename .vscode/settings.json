@@ -1,7 +1,8 @@
 {
     "files.associations": {
         "helloworldplugin.h": "c",
-        "mvbs_aux.h": "c"
+        "mvbs_aux.h": "c",
+        "rte_dds_adaptor.h": "c"
     },
     "cmake.sourceDirectory": "/home/cheeco/Demos/vbslite_trans/lesson1"
 }

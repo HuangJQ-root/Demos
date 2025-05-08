@@ -26,6 +26,8 @@ make
 ### 4. 运行
 在build目录下，执行以下命令来运行程序：
 ```bash
+source ../envsetup.sh
+lunch linux
 ./app1_test
 ./app2_test
 ```
