@@ -1,0 +1,474 @@
+#include <mvbs/sections/start_sec_code.h>
+#include <mvbs/sections/start_sec_bss.h>
+#include <mvbs/sections/start_sec_const.h>
+#include <mvbs/sections/start_sec_data.h>{{"\n"}}
+{%- import './macros.jinja2' as utils -%}
+{{"\n"}}#define __MVBS_CORE_SOURCE__
+
+#include <mvbs/core.h>
+#include <mvbs/mvbs.h>
+#include <mvbs/rtps/message.h>
+#include <mvbs/adapter/adapter.h>
+#include <mvbs/rte/Rte_Dds_Adaptor.h>
+{% if test_mode -%}
+#include <mvbs/utils/mm.h>
+{%- endif %}
+
+static struct participant mvbs_ptcp;
+
+{# step1. Introduce in all IDL headers applied. #}
+{%- for idl in idl_lst %}
+#include "{{idl}}Plugin.h"
+{%- endfor %}
+
+union union_of_all_topics {
+{%- for type in type_lst%}
+	{{type}} __{{type}};
+{%- endfor %}
+};{{"\n"}}
+
+{%- for type in type_lst%}
+extern const struct type_plugin {{type}}_typeplugin;
+{%- endfor %}{{"\n"}}
+
+{# step2. Introduce in all transport definition. #}
+{%- if enable_local %}
+{% if test_mode -%}
+static struct transport_info_local local_trans_info = {
+	.buf_info		= {
+		.buffer_size	= {{participant['local_rx_buffer']}},
+		.buffer		= NULL,
+	},
+};
+{% else -%}
+static uint8_t local_ringbuff[{{participant['local_rx_buffer']}}];
+
+static const struct transport_info_local local_trans_info = {
+	.buf_info		= {
+		.buffer_size	= {{participant['local_rx_buffer']}},
+		.buffer		= local_ringbuff,
+	},
+};
+{%- endif %}
+{%- endif %}
+
+{%- if transport_udpv4|length != 0 %}
+static const struct udp_info udp_info_list[] = {
+	{%- for locator in transport_udpv4 %}
+	{
+		{%- set ip = locator['address'].split('.') %}
+		.addr           = { {{ip[0]}}, {{ip[1]}}, {{ip[2]}}, {{ip[3]}} },
+		{%- set mask = locator['netmask'].split('.') %}
+		.mask           = { {{mask[0]}}, {{mask[1]}}, {{mask[2]}}, {{mask[3]}} },
+		.addr_uint32_le = {{locator['addr_uint32_le']}}, /* {{locator['address']}} */
+		.mask_uint32_le = {{locator['mask_uint32_le']}}, /* {{locator['netmask']}} */
+	},
+	{%- endfor %}
+};
+
+{% if test_mode -%}
+static struct transport_info_udp udp_trans_info = {
+	.buf_info		= {
+		.buffer_size	= {{participant['udp_rx_buffer']}},
+		.buffer		= NULL,
+	},
+	.rx_buf			= {
+		.buffer_size	= MVBS_UDP_RXBUFSIZE,
+		.buffer		= NULL,
+	},
+	.tx_buf			= {
+		.buffer_size	= MVBS_UDP_TXBUFSIZE,
+		.buffer		= NULL,
+	},
+	.info_cnt		= {{transport_udpv4|length}},
+	.info			= udp_info_list,
+};
+{% else -%}
+static uint8_t udp_ringbuff[{{participant['udp_rx_buffer']}}];
+
+static uint8_t udp_recv_buffer[MVBS_UDP_RXBUFSIZE];
+static uint8_t udp_send_buffer[MVBS_UDP_TXBUFSIZE];
+
+static const struct transport_info_udp udp_trans_info = {
+	.buf_info		= {
+		.buffer_size	= {{participant['udp_rx_buffer']}},
+		.buffer		= udp_ringbuff,
+	},
+	.rx_buf			= {
+		.buffer_size	= MVBS_UDP_RXBUFSIZE,
+		.buffer		= udp_recv_buffer,
+	},
+	.tx_buf			= {
+		.buffer_size	= MVBS_UDP_TXBUFSIZE,
+		.buffer		= udp_send_buffer,
+	},
+	.info_cnt		= {{transport_udpv4|length}},
+	.info			= udp_info_list,
+};
+{%- endif %}
+{%- endif %}
+
+{%- if transport_ipc_j6m|length != 0 %}
+{% if test_mode -%}
+static struct transport_info_ipc_j6m ipc_j6m_info = {
+	.buf_info		= {
+		.buffer_size	= {{transport_ipc_j6m[0]['buffer_size']}},
+		.buffer         = NULL,
+	},
+
+	.rx_buf			= {
+		.buffer_size	= {{transport_ipc_j6m[0]['rx_pkg_size']}},
+		.buffer		= NULL,
+	},
+
+	.tx_buf			= {
+		.buffer_size	= {{transport_ipc_j6m[0]['tx_pkg_size']}},
+		.buffer		= NULL,
+	},
+};
+{{"\n"}}
+{% else -%}
+static uint8_t ipc_j6m_rx_pkg[{{transport_ipc_j6m[0]['rx_pkg_size']}}];
+static uint8_t ipc_j6m_tx_pkg[{{transport_ipc_j6m[0]['tx_pkg_size']}}];
+static uint8_t ipc_j6m_buffer[{{transport_ipc_j6m[0]['buffer_size']}}];
+
+static const struct transport_info_ipc_j6m ipc_j6m_info = {
+	.buf_info		= {
+		.buffer_size	= {{transport_ipc_j6m[0]['buffer_size']}},
+		.buffer         = ipc_j6m_buffer,
+	},
+
+	.rx_buf			= {
+		.buffer_size	= {{transport_ipc_j6m[0]['rx_pkg_size']}},
+		.buffer		= ipc_j6m_rx_pkg,
+	},
+
+	.tx_buf			= {
+		.buffer_size	= {{transport_ipc_j6m[0]['tx_pkg_size']}},
+		.buffer		= ipc_j6m_tx_pkg,
+	},
+};
+{{"\n"}}
+{%- endif %}
+{%- endif %}
+
+{%- if remote_reader != 0 %}
+{{ utils.gen_static_array('reader', participant['writers'], qos_lst) }}
+{%- endif %}
+{%- if remote_writer != 0 %}
+{{ utils.gen_static_array('writer', participant['readers'], qos_lst) }}
+{%- endif %}
+
+{%- if participant['readers'] %}
+{{ utils.gen_local_array('reader', participant['readers'], qos_lst, participant['check_crc'])}}
+{%- endif %}
+{%- if participant['writers'] %}
+{{ utils.gen_local_array('writer', participant['writers'], qos_lst, participant['check_crc'])}}
+{%- endif %}
+
+static const struct participant_attr mvbs_ptcp_attr = {
+	{%- if transport_udpv4|length != 0 %}
+	.name		= "{{participant['name']}}_{{transport_udpv4[0]['address']}}",
+	{%- else %}
+	.name		= "{{participant['name']}}",
+	{%- endif %}
+	.domain_id	= {{participant["domain_id"]}},
+
+	/* 1. Maximum number of each resource */
+	.max_readers	= {{participant['readers']|length if participant['readers'] else 0 }},
+	.max_writers	= {{participant['writers']|length if participant['writers'] else 0 }},
+	.max_timers	= {{timer_num}},
+	.max_proxies	= {{participant['max_remote_participants']}},
+
+	.max_topic_size = sizeof(union union_of_all_topics),
+
+	/* 2. Configuration of Transport */
+	.trans_info 	= {
+	{%- if enable_local %}
+		.local_comm	= &local_trans_info,
+	{%- else %}
+		.local_comm	= NULL,
+	{%- endif %}
+
+	{%- if transport_udpv4|length != 0 %}
+		.udp		= &udp_trans_info,
+	{%- else %}
+		.udp 		= NULL,
+	{%- endif %}
+
+	{%- if transport_ipc_j6m|length != 0 %}
+		.ipc_j6m	= &ipc_j6m_info,
+	{%- else %}
+		.ipc_j6m 	= NULL,
+	{%- endif %}
+	},
+
+	/* 3. Configuration for Discovery */
+	.discovery	= {
+		.edp_type				= {{"STATIC_EDP" if participant['discovery']|upper == "DPSE" else "DYNAMIC_EDP"}},
+		.lease_duration				= { {{discovery['liveliness']['lease_duration'][0]}}, {{discovery['liveliness']['lease_duration'][1]}} },
+		.lease_duration_announce_period		= { {{discovery['liveliness']['period'][0]}}, {{discovery['liveliness']['period'][1]}} },
+		.initial_announce_count			= {{discovery['announce']['times']}},
+		.initial_announce_period		= { {{discovery['announce']['period'][0]}}, {{discovery['announce']['period'][1]}} },
+		.hb_policy = {
+			.heartbeats_per_max_samples	= {{discovery['heartbeat']['per_samples']}},
+			.period_sec			= {{discovery['heartbeat']['period'][0]}},
+			.period_msec			= {{discovery['heartbeat']['period'][1]}},
+		},
+	},
+
+	/* 4. Configuration of Endpoints */
+	.static_reader_num	= {{ remote_reader }},
+	.static_reader_attrs	= {{ "NULL" if remote_reader == 0 else "static_remote_readers" }},
+	.static_writer_num	= {{ remote_writer }},
+	.static_writer_attrs	= {{ "NULL" if remote_writer == 0 else "static_remote_writers" }},
+
+	.reader_num		= {{participant['readers']|length if participant['readers'] else 0 }},
+	.reader_attrs		= {{"mvbs_reader_attrs" if participant['readers'] else "NULL"}},
+	.writer_num		= {{participant['writers']|length if participant['writers'] else 0 }},
+	.writer_attrs		= {{"mvbs_writer_attrs" if participant['writers'] else "NULL"}},
+
+	/* 5. Entities list */
+	.readers		= {{"mvbs_readers" if participant['readers'] else "NULL"}},
+	.writers		= {{"mvbs_writers" if participant['writers'] else "NULL"}},
+
+	/* 6. Configuration of preferred remote participant list */
+	.preferred_list_num	= {{participant['preferred_remote_participant']|length if participant['preferred_remote_participant'] else 0 }},
+{%- if participant['preferred_remote_participant']|length %}
+	.preferred_list		= (const char * []) {
+		{%- for ptcp in participant['preferred_remote_participant']%}
+		"{{ptcp}}",
+		{%- endfor %}
+	},
+{%- else %}
+	.preferred_list		= NULL,
+{%- endif %}
+};
+{% if transport_udpv4|length != 0 %}
+static struct udp_transport	mvbs_transport;
+{%- else %}
+{%- if transport_ipc_j6m|length != 0 %}
+static struct ipc_j6m_transport	mvbs_transport;
+{%- endif %}
+{%- endif %}
+
+static struct discovery_pdp pdp_template = {
+	/* encapsulation options */
+	/* const uint8_t SCHEME_PL_CDR_LE[2] = { 0x00, 0x03 }; */
+	.encapsulation_kind		= {0x00, 0x03},
+	.encapsulation_options		= 0,
+
+	/* PID_PROTOCOL_VERSION */
+	.protocol_version_pid		= PID_PROTOCOL_VERSION,
+	.protocol_version_length	= 4,
+	.protocol_version_major		= 2,
+	.protocol_version_minor		= 3,
+	.padding1			= 0,
+
+	/* PID_VENDORID */
+	.vendorid_pid			= PID_VENDORID,
+	.vendorid_length		= 4,
+	.vendorid_value		        = {MVBS_VENDOR_ID_HIGH, MVBS_VENDOR_ID_LOW},
+
+	/* PID_BUILTIN_ENDPOINT_SET */
+	.builtin_endpoint_set_pid	= PID_BUILTIN_ENDPOINT_SET,
+	.builtin_endpoint_set_length	= 4,
+	.builtin_endpoint_set_value	= DISC_BIE_PARTICIPANT_ANNOUNCER
+					| DISC_BIE_PARTICIPANT_DETECTOR
+					| DISC_BIE_PUBLICATION_ANNOUNCER
+					| DISC_BIE_PUBLICATION_DETECTOR
+					| DISC_BIE_SUBSCRIPTION_ANNOUNCER
+					| DISC_BIE_SUBSCRIPTION_DETECTOR
+					| BIE_PARTICIPANT_MESSAGE_DATA_READER
+					| BIE_PARTICIPANT_MESSAGE_DATA_WRITER
+					| DISC_BIE_DIAG_REQUEST_READER
+
+#ifdef MVBS_DIAG_REQUEST_WRITER_ENABLE
+					| DISC_BIE_DIAG_REQUEST_WRITER
+#endif
+
+#ifdef MVBS_DIAG_REPLY_READER_ENABLE
+					| DISC_BIE_DIAG_REPLY_READER
+#endif
+					| DISC_BIE_DIAG_REPLY_WRITER
+
+					,
+
+	/* PID_MVBS_VERTION */
+	.mvbs_version_pid		= PID_VBS_VERTION,
+	.mvbs_version_length		= 4,
+	.mvbs_version_value		= {MVBS_VERSION_MAJOR,
+					   MVBS_VERSION_MINOR,
+					   MVBS_VERSION_EXTRA,
+					   MVBS_VERSION_PATCH},
+
+	/* PID_PARTICIPANT_LEASE_DURATION */
+	.ptcp_lease_duration_pid	= PID_PARTICIPANT_LEASE_DURATION,
+	.ptcp_lease_duration_length	= 8,
+	/* .ptcp_lease_duration_value	= ptcp->attr->discovery.lease_duration, */
+
+	/* PID_PARTICIPANT_GUID */
+	.ptcp_guid_pid			= PID_PARTICIPANT_GUID,
+	.ptcp_guid_length		= 16,
+	.ptcp_guid_value.eid		= {
+		.entity_key		= {0, 0, 1},
+		.entity_kind		= BUILD_IN_PARTICIPANT,
+	},
+	/* .participant_guid_value	= ptcp->guid_prefix, */
+
+	/* PID_SESSION_ID */
+	.session_id_pid			= PID_SESSION_ID,
+	.session_id_length		= 8,
+	/* .session_id_value_hi		= ptcp->session_id_high, */
+	/* .session_id_value_lo		= ptcp->session_id_low, */
+};
+
+static struct discovery_edp edp_template = {
+	/* encapsulation options */
+	/* const uint8_t SCHEME_PL_CDR_LE[2] = { 0x00, 0x03 }; */
+	.encapsulation_kind	= {0x00, 0x03},
+	.encapsulation_options	= 0,
+
+	/* PID_KEY_HASH */
+	.key_hash_pid		= PID_KEY_HASH,
+	.key_hash_pid_length	= 16,
+	/* .key_hash_value	= Endpoint GUID */
+
+	/* PID_ENDPOINT_GUID */
+	.guid_pid		= PID_ENDPOINT_GUID,
+	.guid_pid_length	= 16,
+	/* .guid_kind		= Endpoint GUID */
+
+	/* PID_RELIABILITY */
+	.reliability_pid	= PID_RELIABILITY,
+	.reliability_pid_length	= 12,
+	/* .reliability_kind	= ep_attr->qos.reliability_kind, */
+	.reliability_reserve1	= 0,
+	.reliability_reserve2	= 0,
+
+	/* PID_DURABILITY */
+	.durability_pid		= PID_DURABILITY,
+	.durability_pid_length	= 4,
+	/* .durability_kind	=  ep_attr->qos.durability_kind, */
+
+	/* PID_DEADLINE */
+	.deadline_pid		= PID_DEADLINE,
+	.deadline_pid_length	= 8,
+	/* .deadline_kind	= ep_attr->deadline.duration, */
+
+	/* PID_LIVELINESS */
+	.liveliness_pid		= PID_LIVELINESS,
+	.liveliness_pid_length	= 12,
+	/* .liveliness_kind	= ep_attr->qos.liveliness_kind, */
+	/* .lease_duration	= ep_attr->liveliness.lease_duration, */
+
+	/* PID_OWNERSHIP */
+	.ownership_pid		= PID_OWNERSHIP,
+	.ownership_pid_length	= 4,
+	/* .ownership_kind	= ep_attr->qos.ownership_kind, */
+
+	/* PID_OWNERSHIP_STRENGTH */
+	.ownership_strength_pid		= PID_OWNERSHIP_STRENGTH,
+	.ownership_strength_pid_length	= 4,
+	/* .ownership_strength_value	= ep_attr->ownership_strength.value, */
+
+	/* PID_E2E_PROTECTION */
+	.e2e_pid		= PID_E2E_PROTECTION,
+	.e2e_pid_length		= 4,
+	/* .e2e_kind		= ep_attr->e2e.e2e_protection ? 1U : 0U, */
+
+	/* PID_MVBS_VERTION */
+	.agent_pid		= PID_AGENT_ENDPOINT,
+	.agent_length		= 4,
+	// .agent_value		= ep_attr->agent_flag ? 1U : 0U,
+	/* PID_CRC16_IDL  */
+	/* PID_TOPIC_NAME */
+	/* PID_TYPE_NAME  */
+};
+
+static struct participant_timer_pool {
+	struct mp_blk_hdr	hdr;
+	struct timer_handler	timer;
+} participant_timer_list [{{timer_num}}];
+
+struct participant_proxy_elem {
+	struct participant_proxy	proxy;
+	struct locator			meta_uc_loc[{{transport_udpv4|length}}];
+	struct locator			dfl_uc_loc[{{transport_udpv4|length}}];
+};
+
+static struct participant_proxy_pool {
+	struct mp_blk_hdr		hdr;
+	struct participant_proxy_elem	elem;
+} participant_proxy_list [{{participant['max_remote_participants']}}];
+
+static struct participant_proxy_elem	pdp_received;
+static struct rtps_property             property_list[PROPERTY_LIST_MAX_COUNT];
+
+static struct participant mvbs_ptcp = {
+	.attr		= &mvbs_ptcp_attr,
+	.proxies	= {
+		.mem_addr  = (void *)&participant_proxy_list,
+		.mem_size  = sizeof(participant_proxy_list),
+		.blk_total = {{participant['max_remote_participants']}},
+		.blk_free  = {{participant['max_remote_participants']}},
+		.blk_size  = sizeof(participant_proxy_list[0]) - MP_BLK_HDR_SIZE,
+	},
+	.timers		= {
+		.mem_addr  = (void *)&participant_timer_list,
+		.mem_size  = sizeof(participant_timer_list),
+		.blk_total = {{timer_num}},
+		.blk_free  = {{timer_num}},
+		.blk_size  = sizeof(participant_timer_list[0]) - MP_BLK_HDR_SIZE,
+	},
+	.ptransport	= (struct transport *)&mvbs_transport,
+	.pdp_received	= (struct participant_proxy *)&pdp_received,
+
+	.pdp_template   = &pdp_template,
+	.edp_template   = &edp_template,
+
+	.property	= {
+		.max_count      = PROPERTY_LIST_MAX_COUNT,
+		.valid_count    = 0,
+		.property_list  = property_list,
+	},
+
+	.inited		= false,
+	.started	= false,
+};
+
+{% if test_mode -%}
+static Rte_Dds_Participant {{__intf_name__}}(void)
+{
+	extern void mvbs_mm_init(void);
+
+	mvbs_mm_init();
+
+{%- if enable_local %}
+	local_trans_info.buf_info.buffer = mvbs_malloc({{participant['local_rx_buffer']}}, 0);
+{%- endif %}
+
+{%- if transport_udpv4|length != 0 %}
+	udp_trans_info.buf_info.buffer = mvbs_malloc(udp_trans_info.buf_info.buffer_size, 0);
+	udp_trans_info.tx_buf.buffer   = mvbs_malloc(udp_trans_info.tx_buf.buffer_size, 0);
+	udp_trans_info.rx_buf.buffer   = mvbs_malloc(udp_trans_info.rx_buf.buffer_size, 0);
+{%- endif %}
+
+{%- if transport_ipc_j6m|length != 0 %}
+	ipc_j6m_info.buf_info.buffer = mvbs_malloc({{transport_ipc_j6m[0]['buffer_size']}}, 0);
+	ipc_j6m_info.rx_buf.buffer = mvbs_malloc({{transport_ipc_j6m[0]['rx_pkg_size']}}, 0);
+	ipc_j6m_info.tx_buf.buffer = mvbs_malloc({{transport_ipc_j6m[0]['tx_pkg_size']}}, 0);
+{%- endif %}
+
+	return &mvbs_ptcp;
+}
+{% else -%}
+Rte_Dds_Participant {{__intf_name__}}(void)
+{
+	return &mvbs_ptcp;
+}
+{%- endif %}
+#include <mvbs/sections/stop_sec_data.h>
+#include <mvbs/sections/stop_sec_const.h>
+#include <mvbs/sections/stop_sec_bss.h>
+#include <mvbs/sections/stop_sec_code.h>

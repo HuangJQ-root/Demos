@@ -1,0 +1,1 @@
+/bin/cc -g CMakeFiles/server.dir/rpc_test/server.c.o CMakeFiles/server.dir/generated/calculatorRpcServer.c.o CMakeFiles/server.dir/generated/calculatorRpcParams.c.o -o server  mvbs/libmvbs.a mvbs/libmvbs_aux.a

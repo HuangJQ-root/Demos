@@ -1,0 +1,356 @@
+{# /*
+ * Copyright (c) 2025 Li Auto Inc. and its affiliates
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */ #}
+
+{% import './general/typeMacrosPro.jinja2' as MacrosPro -%}
+
+{%- macro isExistSeq(constructMapList, node, type) %}
+{%- set count_list = [] %}
+{%- for node in constructMapList %}
+	{%- for member in node.memberFieldMapList %}
+		{%- if member.isSeq %}
+			{%- set _ = count_list.append("1") %}
+		{%- endif %}
+	{%- endfor %}
+{%- endfor %}
+{%- if count_list|length > 0  and type == 'include'%}
+#include <mcdr/mcdr_seq_type.h>
+{%- elif count_list|length > 0  and type == 'Tseq'%}
+#define MSEQ_ELEM	{{ node.nativeFQNameInModule }}
+#define MSEQ_NAME	{{ node.nativeFQNameInModule }}Seq
+#include <mcdr/mcdr_seq_template.h>
+{%- endif %}
+{%- endmacro %}
+
+{%- macro defineTopicCreate(node) -%}
+{{ node.nativeFQNameInModule }} *{{ node.nativeFQNameInModule }}_create(void)
+{
+	{{ node.nativeFQNameInModule }} *sample;
+	{%- if  node.constructKind == "struct"  %}
+	uint32_t size = sizeof(struct {{ node.nativeFQNameInModule }});
+	{%- else %}
+	uint32_t size  = {{ node.nativeFQNameInModule }}_get_type_size();
+	{%- endif %}
+
+	sample = ({{ node.nativeFQNameInModule }} *)mvbs_calloc(1, size);
+	return sample;
+}
+{%- endmacro %}
+
+{%- macro defineTopicDelete(node) -%}
+void {{ node.nativeFQNameInModule }}_delete({{ node.nativeFQNameInModule }} *sample)
+{
+	if (sample != NULL) {
+		mvbs_free(sample);
+	}
+}
+{%- endmacro %}
+
+{%- macro defineTopicSerialize(node) -%}
+bool {{ node.nativeFQNameInModule }}_serialize_topic(struct mvbs_cdr *cdr,
+						{{ node.nativeFQNameInModule }} *topic)
+{
+	{{- MacrosPro.ProcessSerialize(node) }}
+	return !mcdr_buffer_has_error(cdr);
+}
+{%- endmacro %}
+
+{%- macro defineTopicRpcSerialize(node) -%}
+bool {{ node.nativeFQNameInModule }}_serialize_rpc_topic(struct mvbs_cdr *cdr,
+						{{ node.nativeFQNameInModule }} *topic)
+{
+	{{- MacrosPro.ProcessSerialize(node) }}
+	return !mcdr_buffer_has_error(cdr);
+}
+{%- endmacro %}
+
+{%- macro declareTopicRpcSerialize(node) -%}
+bool {{ node.nativeFQNameInModule }}_serialize_rpc_topic(struct mvbs_cdr *cdr,
+						{{ node.nativeFQNameInModule }} *topic);
+{%- endmacro %}
+
+
+{%- macro defineMcdrbufferAvailableSize() -%}
+static bool mcdrBuffer_available_size(struct mvbs_cdr *cdr)
+{
+	uint16_t size;
+
+	if (cdr == NULL) {
+		return false;
+	}
+
+	size = mcdr_buffer_remaining(cdr);
+
+	if (size == 0u) {
+		pr_info("cdr->final - cdr->cur_pos = 0\n");
+		return false;
+	}
+
+	return true;
+}
+{%- endmacro %}
+
+{%- macro defineTopicRpcDeserialize(node) %}
+bool {{ node.nativeFQNameInModule }}_deserialize_rpc_topic(struct mvbs_cdr *cdr,
+						{{ node.nativeFQNameInModule }} *topic)
+{
+	{{- MacrosPro.ProcessDeserialize(node) }}
+	return !mcdr_buffer_has_error(cdr);
+}
+{%- endmacro %}
+
+{%- macro declareTopicRpcDeserialize(node) %}
+bool {{ node.nativeFQNameInModule }}_deserialize_rpc_topic(struct mvbs_cdr *cdr,
+						{{ node.nativeFQNameInModule }} *topic);
+{%- endmacro %}
+
+{%- macro defineTopicDeserialize(node) %}
+bool {{ node.nativeFQNameInModule }}_deserialize_topic(struct mvbs_cdr *cdr,
+						{{ node.nativeFQNameInModule }} *topic)
+{
+	{{- MacrosPro.ProcessDeserialize(node) }}
+	return !mcdr_buffer_has_error(cdr);
+}
+{%- endmacro %}
+
+{%- macro defineTopicDeserializeCompat(node) -%}
+bool {{ node.nativeFQNameInModule }}_deserialize_topic(struct mvbs_cdr *cdr,
+						{{ node.nativeFQNameInModule }} *topic)
+{
+	{{ MacrosPro.ProcessDeserializeCompat(node) }}
+	return true;
+{%- for member in node.memberFieldMapList %}
+{{ MacrosPro.DeserializeInitDataCompat(node,member) }}
+{%- endfor %}
+
+	return true;
+}
+{%- endmacro %}
+
+{%- macro getCompatibleFlag(constructMapList) %}
+{%- set count_list = [] %}
+{%- for node in constructMapList %}
+	{%- if node.extensibility == "COMPATIBLE_EXTENSIBILITY" %}
+	{%- set _ = count_list.append("1") %}
+	{%- endif %}
+{%- endfor %}
+{%- if count_list|length > 0 %}
+{{- defineMcdrbufferAvailableSize() }}
+{%- endif %}
+{%- endmacro %}
+
+
+{%- macro defineGetTopicSize(node) -%}
+uint32_t {{ node.nativeFQNameInModule }}_topic_size({{ node.nativeFQNameInModule }} *topic, uint32_t size)
+{
+{%- if  node.constructKind == "alias" and node.isBaseArray == "false"%}
+{{- MacrosPro.ComputeSize(node,"topicsize") }}
+{%- else %}
+	{%- set type_list = [] %}
+	{%- for member in node.memberFieldMapList%}
+		{%- set _ = type_list.append(member.typeName) %}
+	{%- endfor %}
+	{%- if "string" not in type_list and node.constructKind != 'union'%}
+	UNUSED_ARG(topic);
+	{%- endif %}
+	uint32_t previousSize = size;{{"\n"}}
+	{{- MacrosPro.ComputeSize(node,"topicsize") }}
+	return size - previousSize;
+{%- endif %}
+}
+{%- endmacro %}
+
+{%- macro defineGetRpcTopicSize(node) -%}
+uint32_t get_size_of_{{ node.nativeFQNameInModule }}({{ node.nativeFQNameInModule }} *topic, uint32_t size)
+{
+{%- if  node.constructKind == "alias" and node.isBaseArray == "false"%}
+{{- MacrosPro.ComputeSize(node,"topicsize") }}
+{%- else %}
+	{%- set type_list = [] %}
+	{%- for member in node.memberFieldMapList%}
+		{%- set _ = type_list.append(member.typeName) %}
+	{%- endfor %}
+	{%- if "string" not in type_list%}
+	UNUSED_ARG(topic);
+	{%- endif %}
+	uint32_t previousSize = size;{{"\n"}}
+	{{- MacrosPro.ComputeSize(node,"topicsize") }}
+	return size - previousSize;
+{%- endif %}
+}
+{%- endmacro %}
+
+{%- macro declareGetRpcTopicSize(node) -%}
+uint32_t get_size_of_{{ node.nativeFQNameInModule }}({{ node.nativeFQNameInModule }} *topic, uint32_t size);
+{%- endmacro %}
+
+{%- macro defineGetTopicMaxSize(node) -%}
+uint32_t {{ node.nativeFQNameInModule }}_topic_max_size(uint32_t size)
+{
+	uint32_t previousSize = size;{{"\n"}}
+	{{- MacrosPro.ComputeSize(node,"maxsize") }}
+	return size - previousSize;
+}
+{%- endmacro %}
+
+{%- macro addCommaMicro(constructMapList, index) %}
+{%- if index < constructMapList|length -%},{%-endif %}
+{%- endmacro %}
+
+{%- macro typePluginMicro(constructMapList,idlname, envMap) %}
+{%- for node in constructMapList %}
+{%- if node.constructKind == "struct"%}
+const struct type_plugin  {{node.nativeFQNameInModule}}_typeplugin = {
+	.name		= "{{node.typeCodeFQName}}",
+
+	.deserialize	= {{node.nativeFQNameInModule}}_deserialize,
+	.serialize	= {{node.nativeFQNameInModule}}_serialize,
+
+	.type_size	= {{ node.nativeFQNameInModule }}_get_type_size,
+
+	{%- if "crc16" in node%}
+	.crc16		= "{{node["crc16"]}}"
+	{%- else %}
+	.crc16		= "FFFF"
+	{%- endif %}
+};
+{{"\n"}}
+{%- endif %}
+{%- endfor %}
+{%- endmacro %}
+
+{%- macro defineConstantMicroMicro(member) %}
+#define {{ member.nativeFQNameInModule }} ({{ member.value }})
+{%- endmacro %}
+
+{%- macro CreateNewFunctiondeclaration(node) -%}
+/* --------------------------------------------------------------------------
+ *  All of New Function declarations: {{ node.nativeFQNameInModule }}
+ * --------------------------------------------------------------------------
+ */
+ {%- endmacro %}
+
+ {%- macro CreateNewFunctiondefinition(node) -%}
+/* --------------------------------------------------------------------------
+ *  All of New Function definitions: {{ node.nativeFQNameInModule }}
+ * --------------------------------------------------------------------------
+ */
+ {%- endmacro %}
+
+{# declare all function #}
+{%- macro declareTopicTypeSizeMicro(node) %}
+{%- if node.type_size -%}
+#define	{{node.nativeFQNameInModule | upper }}_SIZE		{{ node.type_size }}
+{%- endif %}
+{%- endmacro %}
+
+{%- macro declareDataTypeMicro(constructMapList,node) %}
+{%- if node.constructKind == "alias" -%}
+{{ declareAlias(node) }}
+{%- elif node.constructKind == "enum" -%}
+{{ declareEnum(node) }}
+{%- elif node.constructKind == "union" -%}
+{{ declareUnion(node) }}
+{%- else %}
+{{ declareStructTopic(constructMapList, node) }}
+{%- endif %}
+{%- endmacro %}
+
+{%- macro declareAlias(node) %}
+{{ MacrosPro.declareMember(node, node.memberFieldMapList[0]) }}
+{%- endmacro %}
+
+{%- macro declareEnum(node) %}
+typedef enum {{ node.nativeFQNameInModule }} {
+	{{- MacrosPro.declareEnumMicro(node)}}
+} {{ node.nativeFQNameInModule}};
+{%- endmacro %}
+
+{%- macro declareUnion(node) %}
+typedef struct {{ node.nativeFQNameInModule }} {
+	{{ node.nativeTypeFQName }} _d;
+
+	struct {{ node.nativeFQNameInModule }}_u {
+		{{- MacrosPro.declareUnionMicro(node)}}
+	} _u;
+} {{ node.nativeFQNameInModule}};
+{%- endmacro %}
+
+{%- macro declareStructTopic(constructMapList, node) -%}
+typedef struct {{ node.nativeFQNameInModule }} {
+{{- headerInit(node) }}
+} {{ node.nativeFQNameInModule }};{{"\n"}}
+{{- isExistSeq(constructMapList, node, "Tseq")}}
+{%- endmacro %}
+
+{%- macro headerInit(node) -%}
+{%- for member in node.memberFieldMapList -%}
+{{- MacrosPro.declareMember(node, member) -}}
+{%- endfor -%}
+{%- endmacro %}
+
+{%- macro declareTopicCreate(node) -%}
+{{ node.nativeFQNameInModule }} *{{ node.nativeFQNameInModule }}_create(void);
+{%- endmacro %}
+
+{%- macro declareTopicDelete(node) -%}
+void {{ node.nativeFQNameInModule }}_delete({{ node.nativeFQNameInModule }} *sample);
+{%- endmacro %}
+
+{%- macro declareTopicSerialize(node) -%}
+bool {{ node.nativeFQNameInModule }}_serialize_topic(struct mvbs_cdr *cdr,
+						const {{ node.nativeFQNameInModule }} *topic);
+{%- endmacro %}
+
+{%- macro declareTopicDeserialize(node) -%}
+bool {{ node.nativeFQNameInModule }}_deserialize_topic(struct mvbs_cdr *cdr,
+						{{ node.nativeFQNameInModule }} *topic);
+{%- endmacro %}
+
+{%- macro declareGetTopicSize(node) -%}
+
+uint32_t {{ node.nativeFQNameInModule }}_topic_size({{ node.nativeFQNameInModule }} *topic,
+											uint32_t size);
+{%- endmacro %}
+
+{%- macro declareGetTopicMaxSize(node) -%}
+uint32_t {{ node.nativeFQNameInModule }}_topic_max_size(uint32_t size);
+{%- endmacro %}
+
+{%- macro declareTopicInit(node) -%}
+void {{ node.nativeFQNameInModule }}_init({{ node.nativeFQNameInModule }} *sample);
+{%- endmacro %}
+{# ----------------------------new add--------------------------------------- #}
+{%- macro declareTopicCreateData(node) -%}
+void *{{ node.nativeFQNameInModule }}_create_data(void);
+{%- endmacro %}
+
+{%- macro declareTopicDeleteData(node) -%}
+void {{ node.nativeFQNameInModule }}_delete_data(void *sample);
+{%- endmacro %}
+
+{%- macro declareGetTopicSize(node) -%}
+uint32_t {{ node.nativeFQNameInModule }}_topic_size({{ node.nativeFQNameInModule }} *topic, uint32_t size);
+{%- endmacro %}
+
+{%- macro declareTopicDeserialize(node) %}
+bool {{ node.nativeFQNameInModule }}_deserialize_topic(struct mvbs_cdr *cdr,
+						{{ node.nativeFQNameInModule }} *topic);
+{%- endmacro %}
+
+{%- macro declareTopicSerialize(node) -%}
+bool {{ node.nativeFQNameInModule }}_serialize_topic(struct mvbs_cdr *cdr,
+						{{ node.nativeFQNameInModule }} *topic);
+{%- endmacro %}

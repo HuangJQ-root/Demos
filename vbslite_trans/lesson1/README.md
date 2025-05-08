@@ -31,31 +31,42 @@ source linux
 ./local_test_app
 ```
 
+### 5.验证环境变量设置
+```bash
+echo $TARGET_PRODUCT_LINUX
+```
+
 ## 警告
 官方解析xml和idl脚本命令有误。
 
-### XML工具
-```bash
+#### XML工具
+
+```shell
 Example: python mvbs-config.py -s ./example/dds_cfg.xml -t example/dds_cfg.c
 Arguments:
-    [-h] or [--help]        Show this help message and exit
-    [-s] or [--source]      Source path or file of json config
-    [-t] or [--targets]     Target file path or file to generated
-    [--test]                Generate source code with test mode
+	[-h] or [--help]	Show this help message and exit
+	[-s] or [--source]	Source path or file of json config
+	[-t] or [--targets]	Target file path or file to generated
+
 ```
 
-### IDL工具
-```bash
-Example1: python mvbs-idl.py -i example/dds.idl -d example -t TEST
-       [-h] or [--help]         Prints this message.
-       [-i] or [--input_file]   input file dir.
-       [-d] or [--destinate_path] destinate file dir.
-       [--test]                 Generate source code with test mode 
+#### IDL工具
+
+```shell
+Example1: python mvbs-idl.py --test -i example/dds.idl -d example -t TEST
+       [-h] or [--help]			Prints this message.
+       [-i] or [--input_file]		input file dir.
+       [-d] or [--destinate_path]	destinate file dir.
+       [--test]				Generte source code with test mode
+
+Example2: python mvbs-rpc.py -i example/rpc.idl -d example
+       [-h] or [--help]			Prints this message.
+       [-i] or [--input_file]		input file dir.
+       [-d] or [--destinate_path]	destinate file dir.
+       [--test]				Generte source code with test mode
 ```
 
 
 
-### 正确做法：
-- `XML工具`：取消 `--test` 选项，生成的文件才能正常运行。
-- `IDL工具`：保留 `--test` 选项，生成的文件才能正常运行。（有无 `test` 生成文件内容不一致） 
+
 

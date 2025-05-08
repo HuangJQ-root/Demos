@@ -1,0 +1,1 @@
+/bin/cc -g CMakeFiles/client.dir/rpc_test/client.c.o CMakeFiles/client.dir/generated/calculatorRpcClient.c.o CMakeFiles/client.dir/generated/calculatorRpcParams.c.o -o client  mvbs/libmvbs.a mvbs/libmvbs_aux.a

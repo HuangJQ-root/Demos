@@ -31,3 +31,8 @@ lunch linux
 ./app1_test
 ./app2_test
 ```
+
+### 5.验证环境变量设置
+```bash
+echo $TARGET_PRODUCT_LINUX
+```

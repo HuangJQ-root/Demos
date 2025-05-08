@@ -59,19 +59,17 @@ python -m pip install antlr4-python3-runtime==4.13.0
 #### 3.2.1. XML工具
 
 ```shell
-Example: python mvbs-config.py -s ./example/dds_cfg.xml -t example/dds_cfg.c --test
+Example: python mvbs-config.py -s ./example/dds_cfg.xml -t example/dds_cfg.c
 Arguments:
 	[-h] or [--help]	Show this help message and exit
 	[-s] or [--source]	Source path or file of json config
 	[-t] or [--targets]	Target file path or file to generated
-	[--test]		Generte source code with test mode
 
 ```
-
 #### 3.2.2. IDL工具
 
 ```shell
-Example1: python mvbs-idl.py --test -i example/dds.idl -d example --test
+Example1: python mvbs-idl.py --test -i example/dds.idl -d example -t TEST
        [-h] or [--help]			Prints this message.
        [-i] or [--input_file]		input file dir.
        [-d] or [--destinate_path]	destinate file dir.
@@ -83,3 +81,5 @@ Example2: python mvbs-rpc.py -i example/rpc.idl -d example
        [-d] or [--destinate_path]	destinate file dir.
        [--test]				Generte source code with test mode
 ```
+
+
