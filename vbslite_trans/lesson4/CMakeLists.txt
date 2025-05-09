@@ -67,7 +67,7 @@ set(IDL_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 add_custom_command(
     OUTPUT ${IDL_OUTPUT_DIR}/HelloWorldPlugin.h ${IDL_OUTPUT_DIR}/HelloWorldPlugin.c
     COMMAND ${CMAKE_COMMAND} -E make_directory ${IDL_OUTPUT_DIR}
-    COMMAND python3 ${IDL_TOOL_PATH} -i ${IDL_INPUT_FILE} -d ${IDL_OUTPUT_DIR} -t TEST
+    COMMAND python -B ${IDL_TOOL_PATH} -i ${IDL_INPUT_FILE} -d ${IDL_OUTPUT_DIR} -t TEST
     DEPENDS ${IDL_INPUT_FILE} ${IDL_TOOL_PATH}
     COMMENT "Generating IDL code"
     VERBATIM
@@ -85,7 +85,7 @@ function(generate_xml_code APP_NAME XML_INPUT_FILE XML_OUTPUT_FILE)
     add_custom_command(
         OUTPUT ${XML_OUTPUT_FILE}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${IDL_OUTPUT_DIR}
-        COMMAND python3 -B ${XML_TOOL_PATH} -s ${XML_INPUT_FILE} -t ${XML_OUTPUT_FILE}
+        COMMAND python -B ${XML_TOOL_PATH} -s ${XML_INPUT_FILE} -t ${XML_OUTPUT_FILE}
         DEPENDS ${XML_TOOL_PATH} ${XML_INPUT_FILE}
         COMMENT "Generating app_config.c from ${APP_NAME}_config.xml"
         VERBATIM
@@ -158,7 +158,7 @@ target_include_directories(sub_test PRIVATE
     ${sub_test_HEADERS}
 )
 
-# 在构建 sub_test 之前生成 IDL 代码和 XML 代码
+# 在构建 sub_test 之前生成 IDL 代码和 XML 代码:先确保其依赖的目标已经被成功构建,确保项目的构建顺序正确，
 add_dependencies(sub_test generate_idl_code generate_sub_xml_code)
 
 # 链接库到可执行文件

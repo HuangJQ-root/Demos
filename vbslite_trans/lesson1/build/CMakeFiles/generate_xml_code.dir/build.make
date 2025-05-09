@@ -72,7 +72,7 @@ generated/app_config.c: /home/cheeco/Demos/vbslite_trans/lesson1/tools/mvbs-cfg/
 generated/app_config.c: /home/cheeco/Demos/vbslite_trans/lesson1/local_test/app_config.xml
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson1/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Generating app_config.c from app_config.xml"
 	/snap/cmake/1463/bin/cmake -E make_directory /home/cheeco/Demos/vbslite_trans/lesson1/build/generated
-	python3 -B /home/cheeco/Demos/vbslite_trans/lesson1/tools/mvbs-cfg/mvbs-config.py -s /home/cheeco/Demos/vbslite_trans/lesson1/local_test/app_config.xml -t /home/cheeco/Demos/vbslite_trans/lesson1/build/generated/app_config.c
+	python -B /home/cheeco/Demos/vbslite_trans/lesson1/tools/mvbs-cfg/mvbs-config.py -s /home/cheeco/Demos/vbslite_trans/lesson1/local_test/app_config.xml -t /home/cheeco/Demos/vbslite_trans/lesson1/build/generated/app_config.c
 
 CMakeFiles/generate_xml_code.dir/codegen:
 .PHONY : CMakeFiles/generate_xml_code.dir/codegen

@@ -1,0 +1,74 @@
+/*
+ * Copyright (c) 2025 Li Auto Inc. and its affiliates
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * This file was generated form {{ Idlfilename }}.idl by the mvbs-idl-gen tool.
+ */
+
+
+{% import './general/typeMacros.jinja2' as Macros -%}
+{% import './general/typeMacrosPro.jinja2' as MacrosPro -%}
+{% import './general/typePluginMacros.jinja2' as PluginMacros -%}
+
+#ifndef __MVBS_{{ Idlfilename | upper }}_H
+#define __MVBS_{{ Idlfilename | upper }}_H
+
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+
+{{- Macros.isExistSeq(constructMapList,'',"include") }}
+
+struct mvbs_cdr;
+
+{%- for file in preproc_directive %}
+#include "{{ file }}"
+{%- endfor %}
+
+{%- for node in constructMapList %}
+{{ Macros.CreateNewFunctiondeclaration(node) }}
+{%- if node.constructKind == "const" %}
+{{- Macros.defineConstantMicroMicro(node) }}
+{%- else %}
+{{ Macros.declareTopicTypeSizeMicro(node) }}
+
+{{ Macros.declareDataTypeMicro(constructMapList, node) }}
+
+{{ Macros.declareTopicInit(node) }}
+
+{{ Macros.declareTopicDeserialize(node) }}
+
+{{ Macros.declareTopicSerialize(node) }}
+
+{{ Macros.declareGetTopicMaxSize(node) }}
+
+{%- if envMap['test_mode'] == "true" %}
+{{ Macros.declareTopicCreate(node) }}
+
+{{ Macros.declareTopicDelete(node) }}
+{%- endif %}
+{# {%- if node.hasKey %}
+{{ Macros.declarefree_keybuffer(node) }}
+{%- endif %}
+
+{{ Macros.declareTopicCreateData(node) }}
+
+{{ Macros.declareTopicDeleteData(node) }} #}
+{%- endif %}
+{%- endfor %}
+
+#endif /* __MVBS_{{ Idlfilename | upper }}_H__ */

@@ -69,13 +69,28 @@ include CMakeFiles/app1_test.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/app1_test.dir/flags.make
 
+generated/HelloWorldPlugin.h: /home/cheeco/Demos/vbslite_trans/lesson2/idl/HelloWorld.idl
+generated/HelloWorldPlugin.h: /home/cheeco/Demos/vbslite_trans/lesson2/tools/mvbs-idl/mvbs-idl.py
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Generating IDL code"
+	/snap/cmake/1463/bin/cmake -E make_directory /home/cheeco/Demos/vbslite_trans/lesson2/build/generated
+	python -B /home/cheeco/Demos/vbslite_trans/lesson2/tools/mvbs-idl/mvbs-idl.py -i /home/cheeco/Demos/vbslite_trans/lesson2/idl/HelloWorld.idl -d /home/cheeco/Demos/vbslite_trans/lesson2/build/generated -t TEST
+
+generated/HelloWorldPlugin.c: generated/HelloWorldPlugin.h
+	@$(CMAKE_COMMAND) -E touch_nocreate generated/HelloWorldPlugin.c
+
+generated/app1_config.c: /home/cheeco/Demos/vbslite_trans/lesson2/tools/mvbs-cfg/mvbs-config.py
+generated/app1_config.c: /home/cheeco/Demos/vbslite_trans/lesson2/multi_topic_test/app1/app1_config.xml
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Generating app_config.c from app1_config.xml"
+	/snap/cmake/1463/bin/cmake -E make_directory /home/cheeco/Demos/vbslite_trans/lesson2/build/generated
+	python -B /home/cheeco/Demos/vbslite_trans/lesson2/tools/mvbs-cfg/mvbs-config.py -s /home/cheeco/Demos/vbslite_trans/lesson2/multi_topic_test/app1/app1_config.xml -t /home/cheeco/Demos/vbslite_trans/lesson2/build/generated/app1_config.c
+
 CMakeFiles/app1_test.dir/codegen:
 .PHONY : CMakeFiles/app1_test.dir/codegen
 
 CMakeFiles/app1_test.dir/multi_topic_test/app1/app1_test.c.o: CMakeFiles/app1_test.dir/flags.make
 CMakeFiles/app1_test.dir/multi_topic_test/app1/app1_test.c.o: /home/cheeco/Demos/vbslite_trans/lesson2/multi_topic_test/app1/app1_test.c
 CMakeFiles/app1_test.dir/multi_topic_test/app1/app1_test.c.o: CMakeFiles/app1_test.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/app1_test.dir/multi_topic_test/app1/app1_test.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object CMakeFiles/app1_test.dir/multi_topic_test/app1/app1_test.c.o"
 	/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/app1_test.dir/multi_topic_test/app1/app1_test.c.o -MF CMakeFiles/app1_test.dir/multi_topic_test/app1/app1_test.c.o.d -o CMakeFiles/app1_test.dir/multi_topic_test/app1/app1_test.c.o -c /home/cheeco/Demos/vbslite_trans/lesson2/multi_topic_test/app1/app1_test.c
 
 CMakeFiles/app1_test.dir/multi_topic_test/app1/app1_test.c.i: cmake_force
@@ -89,7 +104,7 @@ CMakeFiles/app1_test.dir/multi_topic_test/app1/app1_test.c.s: cmake_force
 CMakeFiles/app1_test.dir/generated/HelloWorldPlugin.c.o: CMakeFiles/app1_test.dir/flags.make
 CMakeFiles/app1_test.dir/generated/HelloWorldPlugin.c.o: generated/HelloWorldPlugin.c
 CMakeFiles/app1_test.dir/generated/HelloWorldPlugin.c.o: CMakeFiles/app1_test.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building C object CMakeFiles/app1_test.dir/generated/HelloWorldPlugin.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building C object CMakeFiles/app1_test.dir/generated/HelloWorldPlugin.c.o"
 	/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/app1_test.dir/generated/HelloWorldPlugin.c.o -MF CMakeFiles/app1_test.dir/generated/HelloWorldPlugin.c.o.d -o CMakeFiles/app1_test.dir/generated/HelloWorldPlugin.c.o -c /home/cheeco/Demos/vbslite_trans/lesson2/build/generated/HelloWorldPlugin.c
 
 CMakeFiles/app1_test.dir/generated/HelloWorldPlugin.c.i: cmake_force
@@ -103,7 +118,7 @@ CMakeFiles/app1_test.dir/generated/HelloWorldPlugin.c.s: cmake_force
 CMakeFiles/app1_test.dir/generated/app1_config.c.o: CMakeFiles/app1_test.dir/flags.make
 CMakeFiles/app1_test.dir/generated/app1_config.c.o: generated/app1_config.c
 CMakeFiles/app1_test.dir/generated/app1_config.c.o: CMakeFiles/app1_test.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building C object CMakeFiles/app1_test.dir/generated/app1_config.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building C object CMakeFiles/app1_test.dir/generated/app1_config.c.o"
 	/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/app1_test.dir/generated/app1_config.c.o -MF CMakeFiles/app1_test.dir/generated/app1_config.c.o.d -o CMakeFiles/app1_test.dir/generated/app1_config.c.o -c /home/cheeco/Demos/vbslite_trans/lesson2/build/generated/app1_config.c
 
 CMakeFiles/app1_test.dir/generated/app1_config.c.i: cmake_force
@@ -130,7 +145,7 @@ app1_test: CMakeFiles/app1_test.dir/build.make
 app1_test: mvbs/libmvbs.a
 app1_test: mvbs/libmvbs_aux.a
 app1_test: CMakeFiles/app1_test.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking C executable app1_test"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking C executable app1_test"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/app1_test.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -141,7 +156,9 @@ CMakeFiles/app1_test.dir/clean:
 	$(CMAKE_COMMAND) -P CMakeFiles/app1_test.dir/cmake_clean.cmake
 .PHONY : CMakeFiles/app1_test.dir/clean
 
-CMakeFiles/app1_test.dir/depend:
+CMakeFiles/app1_test.dir/depend: generated/HelloWorldPlugin.c
+CMakeFiles/app1_test.dir/depend: generated/HelloWorldPlugin.h
+CMakeFiles/app1_test.dir/depend: generated/app1_config.c
 	cd /home/cheeco/Demos/vbslite_trans/lesson2/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/cheeco/Demos/vbslite_trans/lesson2 /home/cheeco/Demos/vbslite_trans/lesson2 /home/cheeco/Demos/vbslite_trans/lesson2/build /home/cheeco/Demos/vbslite_trans/lesson2/build /home/cheeco/Demos/vbslite_trans/lesson2/build/CMakeFiles/app1_test.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/app1_test.dir/depend
 

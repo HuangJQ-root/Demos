@@ -1,0 +1,1 @@
+/bin/cc -g CMakeFiles/app1.dir/vbslite_perf/app1/app.c.o CMakeFiles/app1.dir/generated/vbslite_perfPlugin.c.o CMakeFiles/app1.dir/generated/Node1_config.c.o -o app1  mvbs/libmvbs.a mvbs/libmvbs_aux.a

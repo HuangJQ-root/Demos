@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/cheeco/Demos/vbslite_trans/lesson6/build/cmake_install.cmake",
+		"/home/cheeco/Demos/vbslite_trans/lesson6/build/mvbs/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -143,9 +143,9 @@ CMakeFiles/generate_idl_code.dir/clean:
 # Target rules for target CMakeFiles/server.dir
 
 # All Build rule for target.
+CMakeFiles/server.dir/all: CMakeFiles/generate_idl_code.dir/all
 CMakeFiles/server.dir/all: mvbs/CMakeFiles/mvbs.dir/all
 CMakeFiles/server.dir/all: mvbs/CMakeFiles/mvbs_aux.dir/all
-CMakeFiles/server.dir/all: CMakeFiles/generate_idl_code.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/server.dir/build.make CMakeFiles/server.dir/build
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson3/build/CMakeFiles --progress-num=79,80,81,82,83 "Built target server"
@@ -177,9 +177,9 @@ CMakeFiles/server.dir/clean:
 # Target rules for target CMakeFiles/client.dir
 
 # All Build rule for target.
+CMakeFiles/client.dir/all: CMakeFiles/generate_idl_code.dir/all
 CMakeFiles/client.dir/all: mvbs/CMakeFiles/mvbs.dir/all
 CMakeFiles/client.dir/all: mvbs/CMakeFiles/mvbs_aux.dir/all
-CMakeFiles/client.dir/all: CMakeFiles/generate_idl_code.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/client.dir/build.make CMakeFiles/client.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/client.dir/build.make CMakeFiles/client.dir/build
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson3/build/CMakeFiles --progress-num=1,2,3,4,5 "Built target client"

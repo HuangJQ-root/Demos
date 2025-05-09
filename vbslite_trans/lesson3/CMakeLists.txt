@@ -68,14 +68,11 @@ set(IDL_TOOL_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/mvbs-idl/mvbs-rpc.py")
 set(IDL_INPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/idl/calculator.idl") 
 set(IDL_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
-# 查找 Python 解释器
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
-
 # 添加自定义命令来运行 IDL 工具，同时指定生成 calculatorRpcClient.c calculatorRpcParam.c calculatorRpcServer.c
 add_custom_command(
     OUTPUT ${IDL_OUTPUT_DIR}/calculatorRpcClient.h ${IDL_OUTPUT_DIR}/calculatorRpcClient.c ${IDL_OUTPUT_DIR}/calculatorRpcParams.h ${IDL_OUTPUT_DIR}/calculatorRpcParams.c ${IDL_OUTPUT_DIR}/calculatorRpcServer.h ${IDL_OUTPUT_DIR}/calculatorRpcServer.c
-    COMMAND ${Python3_EXECUTABLE} ${IDL_TOOL_PATH} -i ${IDL_INPUT_FILE} -d ${IDL_OUTPUT_DIR}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${IDL_OUTPUT_DIR}
+    COMMAND python -B ${IDL_TOOL_PATH} -i ${IDL_INPUT_FILE} -d ${IDL_OUTPUT_DIR}
     DEPENDS ${IDL_INPUT_FILE} ${IDL_TOOL_PATH}
     COMMENT "Generating IDL code"
 )
@@ -121,7 +118,7 @@ target_include_directories(client PRIVATE
     ${IDL_OUTPUT_DIR}
     ${RPC_TEST_HEADERS}
 )
-# 设置 client 的依赖关系
+# 设置 client 的依赖关系:先确保其依赖的目标已经被成功构建,确保项目的构建顺序正确，
 add_dependencies(client generate_idl_code)
 # 链接库到 client
 if(CONFIG_MVBS)

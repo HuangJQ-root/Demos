@@ -73,7 +73,7 @@ generated/HelloWorldPlugin.h: /home/cheeco/Demos/vbslite_trans/lesson4/idl/Hello
 generated/HelloWorldPlugin.h: /home/cheeco/Demos/vbslite_trans/lesson4/tools/mvbs-idl/mvbs-idl.py
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson4/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Generating IDL code"
 	/snap/cmake/1463/bin/cmake -E make_directory /home/cheeco/Demos/vbslite_trans/lesson4/build/generated
-	python3 /home/cheeco/Demos/vbslite_trans/lesson4/tools/mvbs-idl/mvbs-idl.py -i /home/cheeco/Demos/vbslite_trans/lesson4/idl/HelloWorld.idl -d /home/cheeco/Demos/vbslite_trans/lesson4/build/generated -t TEST
+	python -B /home/cheeco/Demos/vbslite_trans/lesson4/tools/mvbs-idl/mvbs-idl.py -i /home/cheeco/Demos/vbslite_trans/lesson4/idl/HelloWorld.idl -d /home/cheeco/Demos/vbslite_trans/lesson4/build/generated -t TEST
 
 generated/HelloWorldPlugin.c: generated/HelloWorldPlugin.h
 	@$(CMAKE_COMMAND) -E touch_nocreate generated/HelloWorldPlugin.c

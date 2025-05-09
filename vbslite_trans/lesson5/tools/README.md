@@ -56,29 +56,31 @@ python -m pip install antlr4-python3-runtime==4.13.0
 
 ### 3.2. 运行命令
 
-#### 3.2.1. XML工具
+#### XML工具
 
 ```shell
-Example: python mvbs-config.py -s ./example/dds_cfg.xml -t example/dds_cfg.c
+Example: python -B mvbs-config.py -s ./example/dds_cfg.xml -t example/dds_cfg.c
 Arguments:
 	[-h] or [--help]	Show this help message and exit
 	[-s] or [--source]	Source path or file of json config
 	[-t] or [--targets]	Target file path or file to generated
+       [-B]                 prevent the generation of .pyc files.
 
 ```
-#### 3.2.2. IDL工具
+#### IDL工具
 
 ```shell
-Example1: python mvbs-idl.py --test -i example/dds.idl -d example -t TEST
+Example1: python -B mvbs-idl.py -i example/dds.idl -d example/Libdds -t TEST
        [-h] or [--help]			Prints this message.
        [-i] or [--input_file]		input file dir.
        [-d] or [--destinate_path]	destinate file dir.
-       [--test]				Generte source code with test mode
+       [-t]				Generte source code with test mode(required)
+       [-B]                        prevent the generation of .pyc files.
 
-Example2: python mvbs-rpc.py -i example/rpc.idl -d example
+Example2: python -B mvbs-rpc.py -i example/rpc.idl -d example/Librpc
        [-h] or [--help]			Prints this message.
        [-i] or [--input_file]		input file dir.
        [-d] or [--destinate_path]	destinate file dir.
-       [--test]				Generte source code with test mode
+       [-B]                        prevent the generation of .pyc files.
 ```
 

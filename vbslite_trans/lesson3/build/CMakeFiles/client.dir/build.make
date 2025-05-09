@@ -72,8 +72,8 @@ include CMakeFiles/client.dir/flags.make
 generated/calculatorRpcClient.h: /home/cheeco/Demos/vbslite_trans/lesson3/idl/calculator.idl
 generated/calculatorRpcClient.h: /home/cheeco/Demos/vbslite_trans/lesson3/tools/mvbs-idl/mvbs-rpc.py
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson3/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Generating IDL code"
-	/home/cheeco/HaloOS/vbslitespace/vbslitespaceenv/bin/python3.10 /home/cheeco/Demos/vbslite_trans/lesson3/tools/mvbs-idl/mvbs-rpc.py -i /home/cheeco/Demos/vbslite_trans/lesson3/idl/calculator.idl -d /home/cheeco/Demos/vbslite_trans/lesson3/build/generated
 	/snap/cmake/1463/bin/cmake -E make_directory /home/cheeco/Demos/vbslite_trans/lesson3/build/generated
+	python -B /home/cheeco/Demos/vbslite_trans/lesson3/tools/mvbs-idl/mvbs-rpc.py -i /home/cheeco/Demos/vbslite_trans/lesson3/idl/calculator.idl -d /home/cheeco/Demos/vbslite_trans/lesson3/build/generated
 
 generated/calculatorRpcClient.c: generated/calculatorRpcClient.h
 	@$(CMAKE_COMMAND) -E touch_nocreate generated/calculatorRpcClient.c

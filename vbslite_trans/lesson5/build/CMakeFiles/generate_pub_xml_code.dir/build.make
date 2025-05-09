@@ -72,7 +72,7 @@ generated/pub_config.c: /home/cheeco/Demos/vbslite_trans/lesson5/tools/mvbs-cfg/
 generated/pub_config.c: /home/cheeco/Demos/vbslite_trans/lesson5/rte_interface_test/pub/pub_config.xml
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/home/cheeco/Demos/vbslite_trans/lesson5/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Generating app_config.c from pub_config.xml"
 	/snap/cmake/1463/bin/cmake -E make_directory /home/cheeco/Demos/vbslite_trans/lesson5/build/generated
-	python3 -B /home/cheeco/Demos/vbslite_trans/lesson5/tools/mvbs-cfg/mvbs-config.py -s /home/cheeco/Demos/vbslite_trans/lesson5/rte_interface_test/pub/pub_config.xml -t /home/cheeco/Demos/vbslite_trans/lesson5/build/generated/pub_config.c
+	python -B /home/cheeco/Demos/vbslite_trans/lesson5/tools/mvbs-cfg/mvbs-config.py -s /home/cheeco/Demos/vbslite_trans/lesson5/rte_interface_test/pub/pub_config.xml -t /home/cheeco/Demos/vbslite_trans/lesson5/build/generated/pub_config.c
 
 CMakeFiles/generate_pub_xml_code.dir/codegen:
 .PHONY : CMakeFiles/generate_pub_xml_code.dir/codegen

@@ -1,0 +1,153 @@
+{# /*
+ * Copyright (c) 2025 Li Auto Inc. and its affiliates
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */ #}
+
+{#---------------------------------------------- TopicSerialize--------------------------------------------------- #}
+{%- macro defineSerialize(node) -%}
+static bool {{ node.nativeFQNameInModule }}_serialize(void *data, struct serialized_payload *payload)
+{
+	{{ node.nativeFQNameInModule }}  *topic = ({{ node.nativeFQNameInModule }}  *)data;
+	struct mvbs_cdr cdr = {0};
+
+	if ((data == NULL) || (payload == NULL)) {
+		return false;
+	}
+
+	mcdr_init_buffer(&cdr, (const uint8_t *)payload->data + 4, payload->length - 4);
+
+	if (!{{ node.nativeFQNameInModule }}_serialize_topic(&cdr, topic)) {
+		return false;
+	}
+
+	if (!mcdr_serialized_payload_header(&cdr, payload)) {
+		return false;
+	}
+	return true;
+}
+{%- endmacro %}
+{#---------------------------------------------- TopicSerialize--------------------------------------------------- #}
+
+{#---------------------------------------------- TopicDeserialize--------------------------------------------------- #}
+{%- macro defineDeserialize(node) -%}
+static bool {{ node.nativeFQNameInModule }}_deserialize(void *data, struct serialized_payload *payload)
+{
+	{{ node.nativeFQNameInModule }} *topic = ({{ node.nativeFQNameInModule }} *)data;
+	struct mvbs_cdr cdr = {0};
+
+	if (data == NULL) {
+		return false;
+	}
+
+	if (mcdr_init_from_serialized_payload(&cdr, payload) < 0) {
+		return false;
+	}
+
+	if (!{{ node.nativeFQNameInModule }}_deserialize_topic(&cdr, topic)) {
+		return false;
+	}
+
+	return true;
+}
+{%- endmacro %}
+{#---------------------------------------------- TopicDeserialize--------------------------------------------------- #}
+
+{#---------------------------------------------- TopicGetMaxSize--------------------------------------------------- #}
+{%- macro defineGetMaxSize(node) -%}
+static uint32_t {{ node.nativeFQNameInModule }}_get_type_size(void)
+{
+	uint32_t size = ALIGN_UP_4({{ node.nativeFQNameInModule }}_topic_max_size(0) + 4u);
+
+	if (size != {{node.nativeFQNameInModule | upper }}_SIZE)
+	{
+		pr_warn("size:%d, {{node.nativeFQNameInModule | upper }}_SIZE:%d\n", size, {{node.nativeFQNameInModule | upper }}_SIZE);
+		pr_warn("size is not equal to {{node.nativeFQNameInModule | upper }}_SIZE\n");
+
+		return size;
+	}
+
+	return {{node.nativeFQNameInModule | upper }}_SIZE;
+}
+{%- endmacro %}
+{#---------------------------------------------- TopicGetMaxSize--------------------------------------------------- #}
+
+
+{#------------------------------------------------- TopicInit------------------------------------------------------ #}
+
+{%- macro unionInit(node) %}
+	sample->_d = 0;
+	{%- for member in node.memberFieldMapList %}
+	sample->_u.{{member.name}} = {{member.defaultvalue}};
+	{%- endfor %}
+{%- endmacro %}
+
+{%- macro defineTopicInit(node) %}
+void {{ node.nativeFQNameInModule }}_init({{ node.nativeFQNameInModule }} *sample)
+{
+	if (sample != NULL) {
+{%- if node.constructKind == "enum" %}
+		*sample = {{node.memberFieldMapList[0].name}};
+{%- elif node.constructKind == "union" %}
+		{{unionInit(node)}}
+{%- elif node.isAliasOfArray and node.isBaseArray == "true"%}
+		mvbs_memzero(sample, sizeof({{node.memberFieldMapList[0].mvbsTypeName}}) * {{ node.memberFieldMapList[0].arrayTotalSize }});
+{%- elif node.isAliasOfArray and node.isBaseArray =="false"%}
+		mvbs_memzero(sample, sizeof({{node.memberFieldMapList[0].typeName}}) * {{ node.memberFieldMapList[0].arrayTotalSize }});
+{%- elif node.isAliseofSequence and node.isBaseSequence =="true"%}
+{%- for member in node.memberFieldMapList %}
+		{{member.SeqTypeName}}_init(&sample->{{member.seqname}}, {{member.arrayTotalSize}});
+{%- endfor%}
+{%- else -%}
+{%- for member in node.memberFieldMapList %}
+	{%- if member.typeKind == "user" and member.isSeq == 'true' %}
+		{{member.SeqTypeName}}_init(&sample->{{member.name}}, {{member.arrayTotalSize}});
+	{%- elif member.typeKind == "user" and not member.dimensionList%}
+		{{member.nativeTypeFQName}}_init(&sample->{{member.name}});
+	{%- elif member.typeKind == "user" and member.dimensionList%}
+		for(uint16_t i = 0; i < {{member.arrayTotalSize}}; i++) {
+			{{member.nativeTypeFQName}}_init(&sample->{{member.name}}[i]);
+		}
+	{%- else -%}
+		{%- if member.isSeq == 'true'%}
+		{{member.SeqTypeName}}_init(&sample->{{member.name}}, {{member.arrayTotalSize}});
+		{# {{member.SeqTypeName}}_set_maximum(&sample->{{member.name}}, {{member.arrayTotalSize}}); #}
+		{%- elif  member.typeName == "string" or  member.typeName == "wstring"%}
+			{%- if  member.defaultvalue  == "" %}
+		mvbs_memzero(sample->{{ member.name }}, {{member.strSize}} + 1);
+			{%-else %}
+		strncpy(sample->{{ member.name }}, {{ member.defaultvalue }}, sizeof(sample->{{ member.name }}) - 1);
+			{%-endif %}
+		{%- elif member.defaultvalue and not member.dimensionList %}
+			{%- if member.mvbsTypeName == "uint64_t" %}
+		sample->{{ member.name }} = {{ member.defaultvalue }}ULL;
+			{%- elif member.mvbsTypeName == "int64_t" %}
+		sample->{{ member.name }} = {{ member.defaultvalue }}LL;
+			{%- elif member.mvbsTypeName == "float" %}
+		sample->{{ member.name }} = (float){{ member.defaultvalue }};
+			{%- else %}
+		sample->{{ member.name }} = {{ member.defaultvalue }};
+			{%- endif %}
+		{%- elif member.defaultvalue and member.dimensionList%}
+		mvbs_memzero(sample->{{ member.name }}, sizeof({{member.mvbsTypeName}}) * {{member.arrayTotalSize}});
+		{%- elif member.strSize %}
+		mvbs_memzero(sample->{{ member.name }}, {{ member.strSize }} + 1);
+		{%- endif %}
+	{%- endif %}
+{%- endfor %}
+{%- endif %}
+	}
+}
+{%- endmacro %}
+
+{#------------------------------------------------- TopicInit------------------------------------------------------ #}

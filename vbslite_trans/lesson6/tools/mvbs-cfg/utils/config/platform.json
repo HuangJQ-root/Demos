@@ -1,0 +1,243 @@
+{
+    "V1.1":{
+        "url": "https://li.feishu.cn/wiki/Oszhwx6zli8yRLkmPZwcdqCMnxc?sheet=af6700",
+
+        "xcu": {
+            "base": 71010,
+            "security_base": 0,
+            "base_data": 54068,
+
+            "participant_info": {
+                "mem_pool_participant_proxy": 40,
+                "participant_proxy": 160,
+                "mem_pool_reader": 40,
+                "mem_pool_writer": 40,
+                "mem_pool_epattr_compressed": 40,
+                "epattr_compressed": 80
+            },
+
+            "locator_info": {
+                "mem_pool_locator": 40,
+                "Locator": 8,
+                "rtps_UdpConnection": 0
+            },
+
+            "timer_info": {
+                "mem_pool_timer": 40,
+                "timer_handler": 32,
+                "security_extra_timer":3
+            },
+
+            "reader_info": {
+                "reader": 148,
+                "mem_pool_cc": 40,
+                "cache_change": 92,
+                "history_cache": 32,
+                "mem_pool_proxy": 40,
+                "writer_proxy": 96,
+                "reader_attr": 316,
+                "edp_history_cache": 692,
+                "Rte_Dds_Reader": 16,
+                "mvbs_reader": 24
+            },
+
+            "writer_info": {
+                "writer": 136,
+                "mem_pool_cc": 40,
+                "cache_change": 92,
+                "history_cache": 32,
+                "mem_pool_proxy": 40,
+                "reader_proxy": 72,
+                "writer_attr": 316,
+                "edp_history_cache": 692,
+                "Rte_Dds_Writer": 16,
+                "mvbs_writer": 16
+            },
+
+            "idl_info": {
+                "type_plugin": 64,
+                "type_register": 8
+            }
+        }
+    },
+
+    "V1.2":{
+        "url": "https://li.feishu.cn/wiki/Oszhwx6zli8yRLkmPZwcdqCMnxc?sheet=7XUMgH",
+
+        "xcu": {
+            "base": 60178,
+            "security_base": 0,
+            "base_data": 31744,
+            "participant_info": {
+                "participant_proxy": 160
+            },
+
+            "locator_info": {
+                "Locator": 8,
+                "rtps_UdpConnection": 0
+            },
+
+            "timer_info": {
+                "timer_handler": 32,
+                "security_extra_timer":3
+            },
+
+            "reader_info": {
+                "reader": 224,
+                "cache_change": 92,
+                "writer_proxy": 100,
+                "reader_attr": 40,
+                "edp_history_cache": 489
+            },
+
+            "writer_info": {
+                "writer": 204,
+                "cache_change": 92,
+                "reader_proxy": 72,
+                "writer_attr": 40,
+                "edp_history_cache": 489
+            }
+        }
+    },
+
+    "V1.2.1":{
+        "url": "https://li.feishu.cn/wiki/Oszhwx6zli8yRLkmPZwcdqCMnxc?sheet=cFqVT1",
+
+        "xcu": {
+            "base": 44429,
+            "base_data": 42929,
+            "security_base": 0,
+
+            "participant_info": {
+                "participant": 544,
+                "Locator": 20,
+                "thread_handle": 48,
+                "wlp": 76,
+                "rtps_udp_driver": 144,
+                "message": 292,
+                "participant_proxy": 168
+            },
+
+            "locator_info": {
+                "Locator": 12
+            },
+
+            "timer_info": {
+                "timer_handler": 32,
+                "security_extra_timer":3
+            },
+
+            "user": {
+                "reader_info": {
+                    "reader": 224,
+                    "cache_change": 92,
+                    "writer_proxy": 100
+                },
+                "writer_info": {
+                    "writer": 204,
+                    "cache_change": 92,
+                    "reader_proxy": 76
+                }
+            },
+
+            "xml": {
+                "participant_attr": 132,
+                "mvbs_profile": 36,
+                "locator_netinfo": 16,
+                "endpoint_attr_variable": 44
+            }
+        }
+    },
+
+    "V1.3.0":{
+        "url": "https://li.feishu.cn/wiki/Oszhwx6zli8yRLkmPZwcdqCMnxc?sheet=cFqVT1",
+
+        "xcu": {
+            "base": 44302,
+            "base_data": 44302,
+            "security_base": 0,
+
+            "participant_info": {
+                "participant": 352,
+                "Locator": 12,
+                "wlp": 68,
+                "udp_transport": 156,
+                "participant_proxy": 148
+            },
+
+            "locator_info": {
+                "Locator": 12
+            },
+
+            "timer_info": {
+                "timer_handler": 28,
+                "security_extra_timer":3
+            },
+
+            "user": {
+                "reader_info": {
+                    "reader": 204,
+                    "cache_change": 88,
+                    "proxy": 92
+                },
+                "writer_info": {
+                    "writer": 184,
+                    "cache_change": 88,
+                    "proxy": 72
+                }
+            },
+
+            "xml": {
+                "participant_attr": 136,
+                "mvbs_profile": 32,
+                "net_intf": 16,
+                "endpoint_attr_variable": 44
+            }
+        }
+    },
+
+    "V1.4.0":{
+        "url": "https://li.feishu.cn/wiki/Oszhwx6zli8yRLkmPZwcdqCMnxc?sheet=cFqVT1",
+
+        "xcu": {
+            "base": 43199,
+            "base_data": 43199,
+            "security_base": 0,
+
+            "participant_info": {
+                "participant": 340,
+                "Locator": 12,
+                "wlp": 64,
+                "udp_transport": 180,
+                "ipc_j6m_transport": 100,
+                "participant_proxy": 148
+            },
+
+            "locator_info": {
+                "Locator": 12
+            },
+
+            "timer_info": {
+                "timer_handler": 28,
+                "security_extra_timer":3
+            },
+
+            "user": {
+                "reader_info": {
+                    "object": 72,
+                    "cache_change": 44,
+                    "proxy": 72
+                },
+                "writer_info": {
+                    "object": 92,
+                    "cache_change": 28,
+                    "proxy": 48
+                }
+            },
+
+            "xml": {
+                "mvbs_profile": 8
+            }
+        }
+    }
+}
