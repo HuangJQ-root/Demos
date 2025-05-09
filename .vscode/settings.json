@@ -3,7 +3,10 @@
         "helloworldplugin.h": "c",
         "mvbs_aux.h": "c",
         "rte_dds_adaptor.h": "c",
-        "vbslite_perfplugin.h": "c"
+        "vbslite_perfplugin.h": "c",
+        "time.h": "c",
+        "cdefs.h": "c",
+        "errno.h": "c"
     },
     "cmake.sourceDirectory": "/home/cheeco/Demos/vbslite_trans/lesson1"
 }

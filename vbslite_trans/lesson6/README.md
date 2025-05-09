@@ -73,6 +73,10 @@ source linux
 echo $TARGET_PRODUCT_LINUX
 ```
 
+### 6.一些tips
+vbslite_perf.idl文件生成 vbslite_perfPlugin.c 和 vbslite_perfPlugin.h
+在源文件如app.c 引用 #include "vbslite_perfPlugin.h"
+
 ## 警告
 官方解析xml和idl脚本命令有误。
 
