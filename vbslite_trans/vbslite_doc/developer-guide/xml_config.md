@@ -101,8 +101,8 @@
 
 | 标签名称              | 父标签    | 子标签         | 参数标签 | 取值范围 | 使用说明                                      |
 | --------------------- | --------- | -------------- | -------- | -------- | --------------------------------------------- |
-| initial_announcements | discovery |                |          |          |                                               |
-|                       |           | announce_times |          | uint16_t | 快速发现阶段，pdp报文发送次数，推荐配置为5    |
+| announce | discovery |                |          |          |                                               |
+|                       |           | times |          | uint16_t | 快速发现阶段，pdp报文发送次数，推荐配置为5    |
 |                       |           | period         |          |          | 快速发现阶段，pdp报文发送周期，推荐配置为20ms |
 |                       |           |                | sec      | int32_t  |                                               |
 |                       |           |                | nanosec  | uint32_t |                                               |
@@ -115,17 +115,17 @@
 |           |           | period          |          |          | 配置 reliable writer 心跳周期                                              |
 |           |           |                 | sec      | uint32_t |                                                                            |
 |           |           |                 | nanosec  | uint32_t |                                                                            |
-|           |           | per_max_samples |          | uint16_t | 配置 reliable writer，心跳随 sample发送频率，每发送n个sample，发送一个心跳 |
+|           |           | per_samples |          | uint16_t | 配置 reliable writer，心跳随 sample发送频率，每发送n个sample，发送一个心跳 |
 
 ### 设置 participant 保活
 
 | 标签名称   | 父标签    | 子标签         | 参数标签 | 取值范围             | 使用说明                                                                                                                                                                 |
 | ---------- | --------- | -------------- | -------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | liveliness | discovery |                |          |                      |                                                                                                                                                                          |
-|            |           | assert_period  |          |                      | 快速发现阶段后，pdp 报文发送周期                                                                                                                                         |
+|            |           | period  |          |                      | 快速发现阶段后，pdp 报文发送周期                                                                                                                                         |
 |            |           |                | sec      | int32_t[最大5000000] |                                                                                                                                                                          |
 |            |           |                | nanosec  | uint32_t             |                                                                                                                                                                          |
-|            |           | lease_duration |          |                      | 1. 配置节点租期参数，远端超出该时间未收到该节点发出的 pdp 报文，视为该节点失活 2. 推荐将 lease_duration 配置为 assert_period 的三倍及以上防止由于偶发丢包导致的断开重连 |
+|            |           | lease_duration |          |                      | 1. 配置节点租期参数，远端超出该时间未收到该节点发出的 pdp 报文，视为该节点失活 2. 推荐将 lease_duration 配置为 period 的三倍及以上防止由于偶发丢包导致的断开重连 |
 |            |           |                | sec      | int32_t              |                                                                                                                                                                          |
 |            |           |                | nanosec  | uint32_t             |                                                                                                                                                                          |
 

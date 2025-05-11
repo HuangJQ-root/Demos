@@ -6,7 +6,8 @@
         "vbslite_perfplugin.h": "c",
         "time.h": "c",
         "cdefs.h": "c",
-        "errno.h": "c"
+        "errno.h": "c",
+        "start_sec_data.h": "c"
     },
     "cmake.sourceDirectory": "/home/cheeco/Demos/vbslite_trans/lesson1"
 }

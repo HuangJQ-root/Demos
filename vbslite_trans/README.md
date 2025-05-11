@@ -62,4 +62,4 @@ $ pip3 install crcmod==1.7 pcpp==1.30 Jinja2==3.1.2 antlr4-python3-runtime==4.13
 $ pip install -r requirements.txt
 ```
 
-至此，vbslite 移植适配 posix 的测试环境搭建完成，可进行后续的测试相关操作。 
+至此，vbslite 移植适配 posix 的测试环境搭建完成，可进行后续的测试相关操作。 后续测试用例都移植 idl mvbs tools envsetup.sh 4个文件（夹） 
